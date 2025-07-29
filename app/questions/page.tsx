@@ -54,6 +54,7 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(false);
   const [segmentsLoading, setSegmentsLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [expandedSegments, setExpandedSegments] = useState<number[]>([]);
 
   // 获取项目列表
   const fetchProjects = async () => {
@@ -161,6 +162,7 @@ export default function QuestionsPage() {
     setSegments([]);
     setSelectedSegments([]);
     setShowSegments(false);
+    setExpandedSegments([]);
   };
 
   // 全选/取消全选分段
@@ -170,6 +172,30 @@ export default function QuestionsPage() {
     } else {
       setSelectedSegments(segments.map((_, index) => index));
     }
+  };
+
+  // 处理分段展开/折叠
+  const handleToggleSegmentExpand = (index: number) => {
+    setExpandedSegments(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  // 展开/折叠所有分段
+  const handleExpandAllSegments = () => {
+    const allExpanded = expandedSegments.length === segments.length;
+    if (allExpanded) {
+      setExpandedSegments([]);
+    } else {
+      setExpandedSegments(segments.map((_, index) => index));
+    }
+  };
+
+  // 获取分段内容预览
+  const getSegmentPreview = (content: string) => {
+    return content.length > 100 ? content.substring(0, 100) + '...' : content;
   };
 
   // 生成问题
@@ -340,40 +366,90 @@ export default function QuestionsPage() {
                 <h3 className="text-lg font-semibold text-gray-900">
                   分段选择 ({selectedSegments.length}/{segments.length})
                 </h3>
-                <button
-                  onClick={handleSelectAllSegments}
-                  className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  {selectedSegments.length === segments.length ? '取消全选' : '全选'}
-                </button>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-500">
+                    已展开 {expandedSegments.length}/{segments.length}
+                  </span>
+                  <button
+                    onClick={handleExpandAllSegments}
+                    className="text-sm text-blue-600 hover:text-blue-700 transition-colors px-2 py-1 rounded hover:bg-blue-50"
+                  >
+                    {expandedSegments.length === segments.length ? '📁 折叠全部' : '📂 展开全部'}
+                  </button>
+                  <button
+                    onClick={handleSelectAllSegments}
+                    className="text-sm text-blue-600 hover:text-blue-700 transition-colors px-2 py-1 rounded hover:bg-blue-50"
+                  >
+                    {selectedSegments.length === segments.length ? '取消全选' : '全选'}
+                  </button>
+                </div>
               </div>
               
               <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-2">
                 {segments.map((segment, index) => (
                   <div
                     key={index}
-                    className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                    className={`border rounded-lg transition-colors ${
                       selectedSegments.includes(index)
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
-                    onClick={() => handleSegmentSelect(index)}
                   >
-                    <div className="flex items-start space-x-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedSegments.includes(index)}
-                        onChange={() => handleSegmentSelect(index)}
-                        className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <div className="flex-1 min-w-0">
-                        {segment.segmentId && (
-                          <div className="text-xs text-gray-500 mb-1">
-                            ID: {segment.segmentId}
-                          </div>
-                        )}
-                        <div className="text-sm text-gray-700 line-clamp-3">
-                          {segment.content}
+                    {/* 分段头部 - 可点击选中checkbox */}
+                    <div 
+                      className="p-3 cursor-pointer"
+                      onClick={() => handleSegmentSelect(index)}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedSegments.includes(index)}
+                          onChange={() => handleSegmentSelect(index)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <div className="flex-1 min-w-0">
+                          {segment.segmentId && (
+                            <div className="text-xs text-gray-500 mb-1">
+                              ID: {segment.segmentId}
+                            </div>
+                          )}
+                          {expandedSegments.includes(index) ? (
+                            <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                              {segment.content}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-700">
+                              {getSegmentPreview(segment.content)}
+                            </div>
+                          )}
+                          {expandedSegments.includes(index) && (
+                            <div className="mt-2 text-xs text-gray-400">
+                              字符数: {segment.content.length}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            selectedSegments.includes(index) 
+                              ? 'bg-blue-100 text-blue-700' 
+                              : 'bg-gray-100 text-gray-500'
+                          }`}>
+                            {selectedSegments.includes(index) ? '✅ 已选中' : '📄 点击选择'}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleSegmentExpand(index);
+                            }}
+                            className={`px-2 py-1 rounded text-xs transition-colors ${
+                              expandedSegments.includes(index) 
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                            }`}
+                          >
+                            {expandedSegments.includes(index) ? '📁 折叠' : '📂 展开'}
+                          </button>
                         </div>
                       </div>
                     </div>

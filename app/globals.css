@@ -76,3 +76,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Accordion 展开动画 */
+.accordion-content {
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
+}
+
+.accordion-content.expanded {
+  max-height: 500px;
+  opacity: 1;
+}
+
+.accordion-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+}

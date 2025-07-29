@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import PromptSettingsModal from '../components/questions/prompt-settings-modal';
 
 interface Project {
   id: number;
@@ -34,14 +35,24 @@ interface Question {
   createdAt: string;
 }
 
+interface Segment {
+  id: number;
+  content: string;
+  segmentId?: string;
+}
+
 export default function QuestionsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [segments, setSegments] = useState<Segment[]>([]);
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedDataset, setSelectedDataset] = useState('');
+  const [selectedSegments, setSelectedSegments] = useState<number[]>([]);
+  const [showSegments, setShowSegments] = useState(false);
   const [prompt, setPrompt] = useState('基于以下内容，请生成一个相关的问题：\n\n{content}');
   const [loading, setLoading] = useState(false);
+  const [segmentsLoading, setSegmentsLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
 
   // 获取项目列表
@@ -61,6 +72,8 @@ export default function QuestionsPage() {
   const fetchDatasets = async (projectId: string) => {
     if (!projectId) {
       setDatasets([]);
+      setSegments([]);
+      setShowSegments(false);
       return;
     }
 
@@ -72,6 +85,29 @@ export default function QuestionsPage() {
       }
     } catch (error) {
       console.error('获取数据集列表失败:', error);
+    }
+  };
+
+  // 获取数据集分段
+  const fetchSegments = async (datasetId: string) => {
+    if (!datasetId) {
+      setSegments([]);
+      setShowSegments(false);
+      return;
+    }
+
+    try {
+      setSegmentsLoading(true);
+      const response = await fetch(`/api/datasets/${datasetId}/segments?limit=50`);
+      const result = await response.json();
+      if (result.success) {
+        setSegments(result.data.segments);
+        setShowSegments(true);
+      }
+    } catch (error) {
+      console.error('获取数据集分段失败:', error);
+    } finally {
+      setSegmentsLoading(false);
     }
   };
 
@@ -102,10 +138,39 @@ export default function QuestionsPage() {
 
   useEffect(() => {
     if (selectedProject) {
+      resetSelections(); // 重置数据集和分段选择
       fetchDatasets(selectedProject);
       fetchQuestions(selectedProject);
     }
   }, [selectedProject]);
+
+  // 处理分段选择
+  const handleSegmentSelect = (segmentId: number) => {
+    setSelectedSegments(prev => {
+      if (prev.includes(segmentId)) {
+        return prev.filter(id => id !== segmentId);
+      } else {
+        return [...prev, segmentId];
+      }
+    });
+  };
+
+  // 重置选择状态
+  const resetSelections = () => {
+    setSelectedDataset('');
+    setSegments([]);
+    setSelectedSegments([]);
+    setShowSegments(false);
+  };
+
+  // 全选/取消全选分段
+  const handleSelectAllSegments = () => {
+    if (selectedSegments.length === segments.length) {
+      setSelectedSegments([]);
+    } else {
+      setSelectedSegments(segments.map((_, index) => index));
+    }
+  };
 
   // 生成问题
   const handleGenerateQuestions = async () => {
@@ -114,8 +179,15 @@ export default function QuestionsPage() {
       return;
     }
 
+    if (selectedSegments.length === 0) {
+      alert('请至少选择一个分段');
+      return;
+    }
+
     try {
       setGenerating(true);
+      
+      const selectedSegmentContents = selectedSegments.map(index => segments[index].content);
       
       const response = await fetch('/api/questions/generate', {
         method: 'POST',
@@ -126,6 +198,7 @@ export default function QuestionsPage() {
           projectId: selectedProject,
           datasetId: selectedDataset,
           prompt: prompt.trim(),
+          segments: selectedSegmentContents,
         }),
       });
 
@@ -134,6 +207,7 @@ export default function QuestionsPage() {
       if (result.success) {
         alert(`成功生成 ${result.data.total} 个问题！`);
         await fetchQuestions(selectedProject); // 重新获取问题列表
+        setSelectedSegments([]); // 清空选择
       } else {
         alert('生成问题失败: ' + result.error);
       }
@@ -179,22 +253,28 @@ export default function QuestionsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="h-full flex flex-col space-y-6">
       {/* 页面头部 */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">问题生成</h1>
           <p className="text-gray-600 mt-1">从数据集片段生成训练问题</p>
         </div>
-        <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-          <FiDownload className="mr-2 h-4 w-4" />
-          导出数据
-        </button>
+        <div className="flex items-center space-x-3">
+          <PromptSettingsModal 
+            prompt={prompt}
+            onPromptChange={setPrompt}
+          />
+          <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+            <FiDownload className="mr-2 h-4 w-4" />
+            导出数据
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 左侧：数据集选择和提示词配置 */}
-        <div className="space-y-6">
+      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+        {/* 左侧：数据集选择和分段选择 */}
+        <div className="flex flex-col space-y-6 flex-1 lg:flex-1 h-full">
           {/* 数据集选择 */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">数据集选择</h3>
@@ -222,49 +302,99 @@ export default function QuestionsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   选择数据集
                 </label>
-                <Select 
-                  value={selectedDataset} 
-                  onValueChange={setSelectedDataset}
-                  disabled={!selectedProject}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="请选择数据集" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {datasets.map((dataset) => (
-                      <SelectItem key={dataset.id} value={dataset.id.toString()}>
-                        {dataset.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex space-x-3">
+                  <Select 
+                    value={selectedDataset} 
+                    onValueChange={setSelectedDataset}
+                    disabled={!selectedProject}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="请选择数据集" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {datasets.map((dataset) => (
+                        <SelectItem key={dataset.id} value={dataset.id.toString()}>
+                          {dataset.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedDataset && (
+                    <button
+                      onClick={() => fetchSegments(selectedDataset)}
+                      disabled={segmentsLoading}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      {segmentsLoading ? '加载中...' : '查看分段'}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* 提示词配置 */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">提示词配置</h3>
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <FiSettings className="h-4 w-4" />
-              </button>
+          {/* 分段选择 */}
+          {showSegments && (
+            <div className="bg-white rounded-lg border border-gray-200 p-6 flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  分段选择 ({selectedSegments.length}/{segments.length})
+                </h3>
+                <button
+                  onClick={handleSelectAllSegments}
+                  className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  {selectedSegments.length === segments.length ? '取消全选' : '全选'}
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-2">
+                {segments.map((segment, index) => (
+                  <div
+                    key={index}
+                    className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                      selectedSegments.includes(index)
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => handleSegmentSelect(index)}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedSegments.includes(index)}
+                        onChange={() => handleSegmentSelect(index)}
+                        className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        {segment.segmentId && (
+                          <div className="text-xs text-gray-500 mb-1">
+                            ID: {segment.segmentId}
+                          </div>
+                        )}
+                        <div className="text-sm text-gray-700 line-clamp-3">
+                          {segment.content}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            
-            <textarea
-              className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              placeholder="请输入问题生成的提示词模板..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-            />
-            
-            <div className="mt-4 flex items-center justify-between">
+          )}
+        </div>
+
+        {/* 右侧：生成按钮和生成结果 */}
+        <div className="flex flex-col space-y-6 flex-1 lg:flex-1 h-full">
+          {/* 生成按钮 */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                支持使用 {'{content}'} 作为内容占位符
+                已选择 {selectedSegments.length} 个分段，点击右上角设置提示词
               </div>
               <button 
                 onClick={handleGenerateQuestions}
-                disabled={generating || !selectedProject || !selectedDataset}
+                disabled={generating || !selectedProject || !selectedDataset || selectedSegments.length === 0}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {generating ? (
@@ -275,74 +405,74 @@ export default function QuestionsPage() {
                 ) : (
                   <>
                     <FiPlay className="mr-2 h-4 w-4" />
-                    开始生成
+                    开始生成问题
                   </>
                 )}
               </button>
             </div>
           </div>
-        </div>
 
-        {/* 右侧：生成结果 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">生成结果</h3>
-          
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">加载中...</span>
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {questions.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  暂无生成的问题
-                </div>
-              ) : (
-                questions.map((question) => (
-                  <div
-                    key={question.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="text-sm text-gray-500 mb-1">
-                          {getProjectName(question.projectId)} / {getDatasetName(question.datasetId)}
-                        </div>
-                        <div className="text-sm text-gray-700 mb-2 line-clamp-2">
-                          内容片段: {question.content}
-                        </div>
-                        <div className="font-medium text-gray-900">
-                          {question.generatedQuestion}
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2 ml-4">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          question.status === 'answered' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {question.status === 'answered' ? '已答案' : '待答案'}
-                        </span>
-                        <button className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
-                          <FiEdit className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteQuestion(question.id)}
-                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                        >
-                          <FiTrash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      生成时间: {new Date(question.createdAt).toLocaleString('zh-CN')}
-                    </div>
+          {/* 生成结果 */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col flex-1 min-h-0 overflow-hidden">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex-shrink-0">生成结果</h3>
+            
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600">加载中...</span>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto space-y-4 min-h-0 pr-2">
+                {questions.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    暂无生成的问题
                   </div>
-                ))
-              )}
-            </div>
-          )}
+                ) : (
+                  questions.map((question) => (
+                    <div
+                      key={question.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="text-sm text-gray-500 mb-1">
+                            {getProjectName(question.projectId)} / {getDatasetName(question.datasetId)}
+                          </div>
+                          <div className="text-sm text-gray-700 mb-2 line-clamp-2">
+                            内容片段: {question.content}
+                          </div>
+                          <div className="font-medium text-gray-900">
+                            {question.generatedQuestion}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 ml-4">
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            question.status === 'answered' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {question.status === 'answered' ? '已答案' : '待答案'}
+                          </span>
+                          <button className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
+                            <FiEdit className="h-4 w-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteQuestion(question.id)}
+                            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          >
+                            <FiTrash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        生成时间: {new Date(question.createdAt).toLocaleString('zh-CN')}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

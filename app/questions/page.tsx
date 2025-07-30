@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FiPlay, FiSettings, FiDownload, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { FiPlay, FiSettings, FiDownload, FiEdit, FiTrash2, FiCpu } from 'react-icons/fi';
 import {
   Select,
   SelectContent,
@@ -41,6 +41,13 @@ interface Segment {
   segmentId?: string;
 }
 
+interface AIConfig {
+  platform: string;
+  apiUrl: string;
+  apiKey: string;
+  model?: string;
+}
+
 export default function QuestionsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -55,6 +62,107 @@ export default function QuestionsPage() {
   const [segmentsLoading, setSegmentsLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [expandedSegments, setExpandedSegments] = useState<number[]>([]);
+  
+  // 模型相关状态
+  const [aiConfig, setAiConfig] = useState<AIConfig>({ platform: '', apiUrl: '', apiKey: '', model: '' });
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState('');
+  const [modelsLoading, setModelsLoading] = useState(false);
+
+  // 获取AI配置
+  const fetchAIConfig = async () => {
+    try {
+      const response = await fetch('/api/settings?type=ai');
+      const result = await response.json();
+      if (result.success) {
+        setAiConfig(result.data);
+        
+        // 优先从本地存储恢复模型选择，其次使用配置中的模型，最后不选择任何模型
+        const savedModel = localStorage.getItem('selectedModel');
+        const modelToUse = savedModel || result.data.model || '';
+        setSelectedModel(modelToUse);
+        
+        // 如果有配置，自动获取模型列表
+        if (result.data.platform && result.data.apiUrl) {
+          await fetchModels(result.data);
+        }
+      }
+    } catch (error) {
+      console.error('获取AI配置失败:', error);
+    }
+  };
+
+  // 获取模型列表
+  const fetchModels = async (config?: AIConfig) => {
+    const configToUse = config || aiConfig;
+    if (!configToUse.platform || !configToUse.apiUrl) {
+      return;
+    }
+
+    try {
+      setModelsLoading(true);
+      const response = await fetch('/api/models/list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          platform: configToUse.platform,
+          apiUrl: configToUse.apiUrl,
+          apiKey: configToUse.apiKey,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setAvailableModels(result.models);
+        // 不自动选择默认模型，只有当前选中的模型不在列表中时才清空选择
+        if (selectedModel && !result.models.includes(selectedModel)) {
+          setSelectedModel('');
+        }
+      } else {
+        console.error('获取模型列表失败:', result.error);
+        setAvailableModels([]);
+      }
+    } catch (error) {
+      console.error('获取模型列表失败:', error);
+      setAvailableModels([]);
+    } finally {
+      setModelsLoading(false);
+    }
+  };
+
+  // 处理模型切换并保存
+  const handleModelChange = async (model: string) => {
+    setSelectedModel(model);
+    
+    // 保存选择的模型到本地存储
+    try {
+      localStorage.setItem('selectedModel', model);
+      
+      // 同时更新AI配置中的模型设置
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'ai',
+          config: {
+            ...aiConfig,
+            model: model,
+          },
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setAiConfig(prev => ({ ...prev, model }));
+      }
+    } catch (error) {
+      console.error('保存模型选择失败:', error);
+    }
+  };
 
   // 获取项目列表
   const fetchProjects = async () => {
@@ -133,6 +241,7 @@ export default function QuestionsPage() {
   };
 
   useEffect(() => {
+    fetchAIConfig();
     fetchProjects();
     fetchQuestions();
   }, []);
@@ -210,6 +319,11 @@ export default function QuestionsPage() {
       return;
     }
 
+    if (!selectedModel) {
+      alert('请选择AI模型');
+      return;
+    }
+
     try {
       setGenerating(true);
       
@@ -225,6 +339,7 @@ export default function QuestionsPage() {
           datasetId: selectedDataset,
           prompt: prompt.trim(),
           segments: selectedSegmentContents,
+          model: selectedModel, // 添加选中的模型
         }),
       });
 
@@ -287,6 +402,34 @@ export default function QuestionsPage() {
           <p className="text-gray-600 mt-1">从数据集片段生成训练问题</p>
         </div>
         <div className="flex items-center space-x-3">
+          {/* 模型选择器 */}
+          <div className="flex items-center space-x-2">
+            <FiCpu className="h-4 w-4 text-gray-500" />
+            <Select 
+              value={selectedModel} 
+              onValueChange={handleModelChange}
+              disabled={modelsLoading || availableModels.length === 0}
+            >
+              <SelectTrigger className="w-80">
+                <SelectValue placeholder={
+                  modelsLoading ? "加载模型中..." : 
+                  availableModels.length === 0 ? "请先配置AI设置" : 
+                  "选择模型"
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                {availableModels.map((model) => (
+                  <SelectItem key={model} value={model}>
+                    {model}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {modelsLoading && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            )}
+          </div>
+          
           <PromptSettingsModal 
             prompt={prompt}
             onPromptChange={setPrompt}
@@ -466,11 +609,11 @@ export default function QuestionsPage() {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                已选择 {selectedSegments.length} 个分段，点击右上角设置提示词
+                已选择 {selectedSegments.length} 个分段，当前模型: {selectedModel || '未选择'}
               </div>
               <button 
                 onClick={handleGenerateQuestions}
-                disabled={generating || !selectedProject || !selectedDataset || selectedSegments.length === 0}
+                disabled={generating || !selectedProject || !selectedDataset || selectedSegments.length === 0 || !selectedModel}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {generating ? (

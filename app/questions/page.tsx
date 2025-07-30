@@ -487,6 +487,15 @@ function QuestionsPageContent() {
     }
   }, [aiConfig, projects, datasets, selectedProject]);
 
+  // 重置选择状态
+  const resetSelections = () => {
+    setSelectedDataset('');
+    setSegments([]);
+    setSelectedSegments([]);
+    setShowSegments(false);
+    setExpandedSegments([]);
+  };
+
   useEffect(() => {
     fetchAIConfig();
     fetchProjects();
@@ -503,8 +512,7 @@ function QuestionsPageContent() {
     if (selectedProject) {
       resetSelections(); // 重置数据集和分段选择
       fetchDatasets(selectedProject);
-      fetchQuestions(selectedProject, 1, resultDatasetFilter); // 重置到第一页
-      fetchGenerationHistory(selectedProject); // 获取生成历史
+      // 移除自动获取问题列表，只在用户主动查看结果时获取
       setCurrentPage(1); // 重置页码
     }
   }, [selectedProject]);
@@ -512,17 +520,17 @@ function QuestionsPageContent() {
   useEffect(() => {
     if (selectedDataset) {
       fetchSegments(selectedDataset);
-      fetchGenerationHistory(selectedProject, selectedDataset); // 获取特定数据集的生成历史
+      // 移除自动获取生成历史，只在需要时手动获取
     }
-  }, [selectedDataset, selectedProject]);
+  }, [selectedDataset]);
 
-  // 结果区域数据集筛选变化时重新获取问题
-  useEffect(() => {
-    if (selectedProject) {
-      fetchQuestions(selectedProject, 1, resultDatasetFilter);
-      setCurrentPage(1);
-    }
-  }, [resultDatasetFilter]);
+  // 移除结果区域数据集筛选变化时的自动获取，只在用户主动查看结果时获取
+  // useEffect(() => {
+  //   if (selectedProject) {
+  //     fetchQuestions(selectedProject, 1, resultDatasetFilter);
+  //     setCurrentPage(1);
+  //   }
+  // }, [resultDatasetFilter]);
 
   // 简单的本地验证
   const validateConfig = useCallback(() => {
@@ -559,15 +567,6 @@ function QuestionsPageContent() {
       warnings.push('提示词过长可能影响生成效果');
     }
 
-    // 检查段落内容长度
-    if (selectedSegments.length > 0) {
-      const selectedSegmentContents = selectedSegments.map(index => segments[index]?.content).filter(Boolean);
-      const longSegments = selectedSegmentContents.filter(s => s.length > 4000);
-      if (longSegments.length > 0) {
-        warnings.push(`有 ${longSegments.length} 个段落内容过长，可能影响生成质量`);
-      }
-    }
-
     setValidationErrors(errors);
     setValidationWarnings(warnings);
   }, [selectedSegments, prompt, selectedProject, selectedDataset, concurrencyLimit, segments]);
@@ -586,15 +585,6 @@ function QuestionsPageContent() {
         return [...prev, segmentId];
       }
     });
-  };
-
-  // 重置选择状态
-  const resetSelections = () => {
-    setSelectedDataset('');
-    setSegments([]);
-    setSelectedSegments([]);
-    setShowSegments(false);
-    setExpandedSegments([]);
   };
 
   // 全选/取消全选分段
@@ -671,7 +661,9 @@ function QuestionsPageContent() {
         };
       }
       return null;
-    }).filter(item => item !== null && item.content.trim().length > 0);
+    }).filter((item): item is { content: string; prompt: string } => 
+      item !== null && item.content.trim().length > 0
+    );
 
     if (selectedSegmentContents.length === 0) {
       handleError('选中的分段内容为空', '分段内容错误');
@@ -679,9 +671,9 @@ function QuestionsPageContent() {
     }
 
     // 为每个分段生成替换了内容的提示词
-    const segmentsWithPrompts = selectedSegmentContents.map(content => ({
-      content,
-      prompt: prompt.trim().replace('{content}', content)
+    const segmentsWithPrompts = selectedSegmentContents.map(item => ({
+      content: item.content,
+      prompt: prompt.trim().replace('{content}', item.content)
     }));
     
     try {
@@ -919,10 +911,6 @@ function QuestionsPageContent() {
             prompt={prompt}
             onPromptChange={setPrompt}
           />
-          <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-            <FiDownload className="mr-2 h-4 w-4" />
-            导出数据
-          </button>
         </div>
       </div>
 
@@ -981,11 +969,11 @@ function QuestionsPageContent() {
                     >
                       {segmentsLoading ? '加载中...' : '查看分段'}
                     </button>
-            )}
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
 
           {/* 分段选择 */}
           {showSegments && (
@@ -1254,6 +1242,12 @@ function QuestionsPageContent() {
                     )}
                   </div>
                 )}
+                
+                {/* 导出数据按钮 */}
+                <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                  <FiDownload className="mr-2 h-4 w-4" />
+                  导出数据
+                </button>
               </div>
             </div>
             
@@ -1276,45 +1270,14 @@ function QuestionsPageContent() {
                         key={question.id}
                         className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <div className="text-sm text-gray-500 mb-1">
-                              {getProjectName(question.projectId)} / {getDatasetName(question.datasetId)}
-                            </div>
-                            <div className="text-sm text-gray-700 mb-2 line-clamp-2">
-                              内容片段: {question.content}
-                            </div>
-                            <div className="font-medium text-gray-900">
-                              {question.generatedQuestion}
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2 ml-4">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              question.status === 'answered' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {question.status === 'answered' ? '已答案' : '待答案'}
-                            </span>
-                            <button 
-                              onClick={() => handleViewQuestionDetail(question.id)}
-                              className="p-1 text-gray-400 hover:text-green-600 transition-colors"
-                              title="查看详情"
-                            >
-                              <FiInfo className="h-4 w-4" />
-                            </button>
-                            <button className="p-1 text-gray-400 hover:text-blue-600 transition-colors" title="编辑">
-                              <FiEdit className="h-4 w-4" />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteQuestion(question.id)}
-                              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                              title="删除"
-                            >
-                              <FiTrash2 className="h-4 w-4" />
-                            </button>
-                          </div>
+                      <div className="mb-2">
+                        <div className="text-sm text-gray-500 mb-1">
+                          {getProjectName(question.projectId)} / {getDatasetName(question.datasetId)}
                         </div>
+                        <div className="font-medium text-gray-900">
+                          {question.generatedQuestion}
+                        </div>
+                      </div>
                         <div className="text-xs text-gray-400">
                           生成时间: {new Date(question.createdAt).toLocaleString('zh-CN')}
                         </div>

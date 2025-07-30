@@ -23,14 +23,39 @@ export const datasets = sqliteTable('datasets', {
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
+// 问题模板表（保留现有表）
+export const questionTemplates = sqliteTable('question_templates', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  description: text('description'),
+  template: text('template').notNull(),
+  isDefault: integer('is_default', { mode: 'boolean' }).default(false),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// 问题生成任务表（保留现有表）
+export const questionGenerationTasks = sqliteTable('question_generation_tasks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  datasetId: integer('dataset_id').notNull().references(() => datasets.id, { onDelete: 'cascade' }),
+  status: text('status').default('pending'), // pending, running, completed, failed
+  totalQuestions: integer('total_questions').default(0),
+  completedQuestions: integer('completed_questions').default(0),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
 // 问题生成记录表
 export const questions = sqliteTable('questions', {
   id: integer('id').primaryKey({ autoIncrement: true }),
+  uid: text('uid'), // 保留现有字段
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   datasetId: integer('dataset_id').notNull().references(() => datasets.id, { onDelete: 'cascade' }),
   prompt: text('prompt').notNull(),
   content: text('content').notNull(),
   generatedQuestion: text('generated_question').notNull(),
+  wordCount: integer('word_count'), // 保留现有字段
   status: text('status').default('generated'), // generated, answered, exported
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
@@ -47,7 +72,7 @@ export const answers = sqliteTable('answers', {
 // 系统设置表
 export const settings = sqliteTable('settings', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  key: text('key').notNull().unique(),
+  key: text('key').notNull(),
   value: text('value').notNull(),
   description: text('description'),
   updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
@@ -78,3 +103,7 @@ export type Setting = typeof settings.$inferSelect;
 export type NewSetting = typeof settings.$inferInsert;
 export type PromptTemplate = typeof promptTemplates.$inferSelect;
 export type NewPromptTemplate = typeof promptTemplates.$inferInsert;
+export type QuestionTemplate = typeof questionTemplates.$inferSelect;
+export type NewQuestionTemplate = typeof questionTemplates.$inferInsert;
+export type QuestionGenerationTask = typeof questionGenerationTasks.$inferSelect;
+export type NewQuestionGenerationTask = typeof questionGenerationTasks.$inferInsert;

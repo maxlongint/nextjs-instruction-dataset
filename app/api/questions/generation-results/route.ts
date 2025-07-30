@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
         generatedQuestion: questions.generatedQuestion,
         status: questions.status,
         createdAt: questions.createdAt,
-        updatedAt: questions.updatedAt,
       })
       .from(questions)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -46,8 +45,8 @@ export async function GET(request: NextRequest) {
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     // 按状态分组统计
-    const statusStats = results.reduce((acc, result) => {
-      const status = result.status || 'unknown';
+    const statusStats = (results || []).reduce((acc, result) => {
+      const status = result?.status || 'unknown';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -56,9 +55,11 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     
-    const recentResults = results.filter(result => {
+    const recentResults = (results || []).filter(result => {
       try {
-        return result.createdAt && new Date(result.createdAt) >= sevenDaysAgo;
+        if (!result?.createdAt) return false;
+        const createdDate = new Date(result.createdAt);
+        return !isNaN(createdDate.getTime()) && createdDate >= sevenDaysAgo;
       } catch {
         return false;
       }
@@ -66,8 +67,13 @@ export async function GET(request: NextRequest) {
 
     const dailyStats = recentResults.reduce((acc, result) => {
       try {
-        const date = new Date(result.createdAt).toISOString().split('T')[0];
-        acc[date] = (acc[date] || 0) + 1;
+        if (result?.createdAt) {
+          const createdDate = new Date(result.createdAt);
+          if (!isNaN(createdDate.getTime())) {
+            const date = createdDate.toISOString().split('T')[0];
+            acc[date] = (acc[date] || 0) + 1;
+          }
+        }
       } catch {
         // 忽略无效日期
       }
@@ -157,11 +163,10 @@ export async function POST(request: NextRequest) {
         question,
         related: relatedQuestions,
         metadata: {
-          contentLength: question.content.length,
-          questionLength: question.generatedQuestion.length,
-          promptLength: question.prompt.length,
+          contentLength: question.content?.length || 0,
+          questionLength: question.generatedQuestion?.length || 0,
+          promptLength: question.prompt?.length || 0,
           createdAt: question.createdAt,
-          updatedAt: question.updatedAt
         }
       }
     });

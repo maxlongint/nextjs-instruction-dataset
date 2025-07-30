@@ -1,21 +1,40 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { FiSave, FiRefreshCw, FiDatabase, FiSettings, FiGlobe } from 'react-icons/fi';
+import { useState, useEffect, useCallback } from 'react';
+import { FiSave, FiRefreshCw, FiDatabase, FiSettings, FiGlobe, FiCheck } from 'react-icons/fi';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
+} from "../../components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../../components/ui/alert-dialog";
 
 interface AIConfig {
+  platform: string;
   apiUrl: string;
   apiKey: string;
-  modelName: string;
   maxTokens: number;
   temperature: number;
+  concurrency: number;
+}
+
+interface PlatformConfig {
+  name: string;
+  label: string;
+  defaultUrl: string;
+  placeholder: string;
+  requiresKey: boolean;
+  models: string[];
 }
 
 interface AppConfig {
@@ -26,12 +45,65 @@ interface AppConfig {
 
 export default function SettingsPage() {
   const [aiConfig, setAiConfig] = useState<AIConfig>({
+    platform: '',
     apiUrl: '',
     apiKey: '',
-    modelName: 'gpt-3.5-turbo',
     maxTokens: 2000,
     temperature: 0.7,
+    concurrency: 3,
   });
+
+  // 平台配置
+  const platformConfigs: Record<string, PlatformConfig> = {
+    openai: {
+      name: 'openai',
+      label: 'OpenAI',
+      defaultUrl: 'https://api.openai.com/v1',
+      placeholder: 'https://api.openai.com/v1',
+      requiresKey: true,
+      models: []
+    },
+    anthropic: {
+      name: 'anthropic',
+      label: 'Anthropic (Claude)',
+      defaultUrl: 'https://api.anthropic.com',
+      placeholder: 'https://api.anthropic.com',
+      requiresKey: true,
+      models: []
+    },
+    deepseek: {
+      name: 'deepseek',
+      label: 'DeepSeek',
+      defaultUrl: 'https://api.deepseek.com/v1',
+      placeholder: 'https://api.deepseek.com/v1',
+      requiresKey: true,
+      models: []
+    },
+    moonshot: {
+      name: 'moonshot',
+      label: 'Moonshot (Kimi)',
+      defaultUrl: 'https://api.moonshot.cn/v1',
+      placeholder: 'https://api.moonshot.cn/v1',
+      requiresKey: true,
+      models: []
+    },
+    ollama: {
+      name: 'ollama',
+      label: 'Ollama (本地)',
+      defaultUrl: 'http://localhost:11434',
+      placeholder: 'http://localhost:11434',
+      requiresKey: false,
+      models: []
+    },
+    custom: {
+      name: 'custom',
+      label: '自定义',
+      defaultUrl: '',
+      placeholder: '请输入自定义API地址',
+      requiresKey: true,
+      models: []
+    }
+  };
 
   const [appConfig, setAppConfig] = useState<AppConfig>({
     theme: 'light',
@@ -42,6 +114,16 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
 
   // 获取AI配置
   const fetchAIConfig = async () => {
@@ -69,7 +151,38 @@ export default function SettingsPage() {
     }
   };
 
+  // 处理平台选择变化
+  const handlePlatformChange = (platform: string) => {
+    const config = platformConfigs[platform];
+    if (config) {
+      setAiConfig(prev => ({
+        ...prev,
+        platform,
+        apiUrl: config.defaultUrl,
+        apiKey: ''
+      }));
+    } else {
+      // 如果没有选择平台，清空相关字段
+      setAiConfig(prev => ({
+        ...prev,
+        platform: '',
+        apiUrl: '',
+        apiKey: ''
+      }));
+    }
+  };
+
+  // 处理API地址变化
+  const handleApiUrlChange = (newUrl: string) => {
+    setAiConfig(prev => ({ 
+      ...prev, 
+      apiUrl: newUrl
+    }));
+  };
+
+
   useEffect(() => {
+    setMounted(true);
     const loadConfigs = async () => {
       setLoading(true);
       await Promise.all([fetchAIConfig(), fetchAppConfig()]);
@@ -78,6 +191,7 @@ export default function SettingsPage() {
 
     loadConfigs();
   }, []);
+
 
   // 保存AI配置
   const handleSaveAIConfig = async () => {
@@ -97,13 +211,16 @@ export default function SettingsPage() {
       const result = await response.json();
       
       if (result.success) {
-        alert('AI配置保存成功！');
+        setSuccessMessage('AI配置保存成功！');
+        setShowSuccessDialog(true);
       } else {
-        alert('保存失败: ' + result.error);
+        setErrorMessage('保存失败: ' + result.error);
+        setShowErrorDialog(true);
       }
     } catch (error) {
       console.error('保存AI配置失败:', error);
-      alert('保存AI配置失败');
+      setErrorMessage('保存AI配置失败');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
@@ -127,51 +244,58 @@ export default function SettingsPage() {
       const result = await response.json();
       
       if (result.success) {
-        alert('应用配置保存成功！');
+        setSuccessMessage('应用配置保存成功！');
+        setShowSuccessDialog(true);
       } else {
-        alert('保存失败: ' + result.error);
+        setErrorMessage('保存失败: ' + result.error);
+        setShowErrorDialog(true);
       }
     } catch (error) {
       console.error('保存应用配置失败:', error);
-      alert('保存应用配置失败');
+      setErrorMessage('保存应用配置失败');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
   };
 
   // 重置所有设置
-  const handleResetSettings = async () => {
-    if (!confirm('确定要重置所有设置吗？此操作将恢复默认配置，无法撤销。')) {
-      return;
-    }
+  const handleResetSettings = () => {
+    setConfirmMessage('确定要重置所有设置吗？此操作将恢复默认配置，无法撤销。');
+    setConfirmAction(() => async () => {
+      try {
+        setResetting(true);
+        const response = await fetch('/api/settings?action=reset', {
+          method: 'DELETE',
+        });
 
-    try {
-      setResetting(true);
-      const response = await fetch('/api/settings?action=reset', {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        alert('设置重置成功！');
-        // 重新加载配置
-        await Promise.all([fetchAIConfig(), fetchAppConfig()]);
-      } else {
-        alert('重置失败: ' + result.error);
+        const result = await response.json();
+        
+        if (result.success) {
+          setSuccessMessage('设置重置成功！');
+          setShowSuccessDialog(true);
+          // 重新加载配置
+          await Promise.all([fetchAIConfig(), fetchAppConfig()]);
+        } else {
+          setErrorMessage('重置失败: ' + result.error);
+          setShowErrorDialog(true);
+        }
+      } catch (error) {
+        console.error('重置设置失败:', error);
+        setErrorMessage('重置设置失败');
+        setShowErrorDialog(true);
+      } finally {
+        setResetting(false);
       }
-    } catch (error) {
-      console.error('重置设置失败:', error);
-      alert('重置设置失败');
-    } finally {
-      setResetting(false);
-    }
+    });
+    setShowConfirmDialog(true);
   };
 
   // 测试AI连接
   const handleTestAIConnection = async () => {
-    if (!aiConfig.apiUrl || !aiConfig.apiKey) {
-      alert('请先配置API地址和密钥');
+    if (!aiConfig.apiUrl || (!aiConfig.apiKey && platformConfigs[aiConfig.platform]?.requiresKey)) {
+      setErrorMessage('请先配置API地址和密钥');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -187,13 +311,16 @@ export default function SettingsPage() {
       const result = await response.json();
       
       if (result.success) {
-        alert(`✅ ${result.message}`);
+        setSuccessMessage(`✅ ${result.message}`);
+        setShowSuccessDialog(true);
       } else {
-        alert(`❌ ${result.message}`);
+        setErrorMessage(`❌ ${result.message}`);
+        setShowErrorDialog(true);
       }
     } catch (error) {
       console.error('测试AI连接失败:', error);
-      alert('❌ 测试AI连接失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      setErrorMessage('❌ 测试AI连接失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      setShowErrorDialog(true);
     }
   };
 
@@ -207,8 +334,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* 页面头部 */}
+    <>
+      <div className="space-y-6" suppressHydrationWarning>
+        {/* 页面头部 */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">系统设置</h1>
@@ -244,46 +372,69 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                API地址
+                AI平台 <span className="text-red-500">*</span>
               </label>
-              <input
-                type="url"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="https://api.openai.com/v1"
-                value={aiConfig.apiUrl}
-                onChange={(e) => setAiConfig({ ...aiConfig, apiUrl: e.target.value })}
-              />
+              <Select 
+                value={aiConfig.platform || ""} 
+                onValueChange={handlePlatformChange}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="选择AI平台" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(platformConfigs).map((config) => (
+                    <SelectItem key={config.name} value={config.name}>
+                      {config.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!aiConfig.platform && (
+                <p className="text-xs text-red-500 mt-1">请选择AI平台</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                API密钥
+                API地址 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="url"
+                required
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  !aiConfig.apiUrl.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
+                placeholder={aiConfig.platform && platformConfigs[aiConfig.platform] 
+                  ? platformConfigs[aiConfig.platform].placeholder 
+                  : "请先选择AI平台"}
+                value={aiConfig.apiUrl}
+                onChange={(e) => handleApiUrlChange(e.target.value)}
+                disabled={!aiConfig.platform}
+              />
+              {!aiConfig.apiUrl.trim() && aiConfig.platform && (
+                <p className="text-xs text-red-500 mt-1">请填写API地址</p>
+              )}
+              {!aiConfig.platform && (
+                <p className="text-xs text-gray-500 mt-1">选择平台后将自动填入默认地址</p>
+              )}
+            </div>
+
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                API密钥 {aiConfig.platform && platformConfigs[aiConfig.platform]?.requiresKey && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="password"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="sk-..."
+                placeholder={aiConfig.platform === 'ollama' ? '本地部署无需密钥' : 'sk-...'}
                 value={aiConfig.apiKey}
                 onChange={(e) => setAiConfig({ ...aiConfig, apiKey: e.target.value })}
+                disabled={aiConfig.platform === 'ollama'}
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                模型名称
-              </label>
-              <Select value={aiConfig.modelName} onValueChange={(value: string) => setAiConfig({ ...aiConfig, modelName: value })}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="选择模型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                  <SelectItem value="gpt-4">GPT-4</SelectItem>
-                  <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                  <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
-                  <SelectItem value="claude-3-opus">Claude 3 Opus</SelectItem>
-                </SelectContent>
-              </Select>
+              {aiConfig.platform === 'ollama' && (
+                <p className="text-xs text-gray-500 mt-1">Ollama本地部署无需API密钥</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -317,10 +468,29 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                并发数
+                <span className="text-xs text-gray-500 ml-1">(同时处理的请求数量)</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={aiConfig.concurrency}
+                onChange={(e) => setAiConfig({ ...aiConfig, concurrency: parseInt(e.target.value) || 1 })}
+                placeholder="建议设置为1-5"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                设置过高可能导致API限流，建议根据API提供商的限制进行调整
+              </p>
+            </div>
+
             <div className="flex items-center space-x-3 pt-4">
               <button 
                 onClick={handleSaveAIConfig}
-                disabled={saving}
+                disabled={saving || !aiConfig.platform || !aiConfig.apiUrl.trim()}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
                 {saving ? (
@@ -338,7 +508,8 @@ export default function SettingsPage() {
               
               <button 
                 onClick={handleTestAIConnection}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                disabled={!aiConfig.platform || !aiConfig.apiUrl.trim() || (platformConfigs[aiConfig.platform]?.requiresKey && !aiConfig.apiKey.trim())}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
               >
                 <FiGlobe className="mr-2 h-4 w-4" />
                 测试连接
@@ -359,7 +530,7 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 界面主题
               </label>
-              <Select value={appConfig.theme} onValueChange={(value: string) => setAppConfig({ ...appConfig, theme: value })}>
+              <Select value={appConfig.theme || "light"} onValueChange={(value: string) => setAppConfig({ ...appConfig, theme: value })}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="选择主题" />
                 </SelectTrigger>
@@ -375,7 +546,7 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 界面语言
               </label>
-              <Select value={appConfig.language} onValueChange={(value: string) => setAppConfig({ ...appConfig, language: value })}>
+              <Select value={appConfig.language || "zh-CN"} onValueChange={(value: string) => setAppConfig({ ...appConfig, language: value })}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="选择语言" />
                 </SelectTrigger>
@@ -490,5 +661,102 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+
+      {/* 成功提示 Alert Dialog */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center">
+              <FiCheck className="h-5 w-5 text-green-600 mr-2" />
+              操作成功
+            </AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {successMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowSuccessDialog(false)}>
+              确定
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 错误提示 Alert Dialog */}
+      <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center">
+              <div className="h-5 w-5 text-red-600 mr-2">❌</div>
+              操作失败
+            </AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {errorMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowErrorDialog(false)}>
+              确定
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 警告提示 Alert Dialog */}
+      <AlertDialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center">
+              <div className="h-5 w-5 text-orange-600 mr-2">⚠️</div>
+              警告
+            </AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {warningMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowWarningDialog(false)}>
+              确定
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 确认操作 Alert Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center">
+              <div className="h-5 w-5 text-blue-600 mr-2">❓</div>
+              确认操作
+            </AlertDialogTitle>
+            <AlertDialogDescription className="whitespace-pre-line">
+              {confirmMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowConfirmDialog(false);
+              }}
+              className="bg-gray-200 text-gray-800 hover:bg-gray-300"
+            >
+              取消
+            </AlertDialogAction>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowConfirmDialog(false);
+                if (confirmAction) {
+                  confirmAction();
+                }
+              }}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              确定
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

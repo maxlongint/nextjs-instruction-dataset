@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 
 export default function Header() {
   const [currentTime, setCurrentTime] = useState<string>('');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const updateTime = () => {
       const now = new Date();
       setCurrentTime(now.toLocaleString('zh-CN', {
@@ -34,7 +36,7 @@ export default function Header() {
       
       <div className="flex items-center space-x-4">
         <div className="text-sm text-gray-500">
-          {currentTime}
+          {mounted ? currentTime : '--:--:--'}
         </div>
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>

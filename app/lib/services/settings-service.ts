@@ -102,19 +102,21 @@ export class SettingsService {
   static async getAIConfig() {
     try {
       const configs = await Promise.all([
+        this.getSettingByKey('ai_platform'),
         this.getSettingByKey('ai_api_url'),
         this.getSettingByKey('ai_api_key'),
-        this.getSettingByKey('ai_model_name'),
         this.getSettingByKey('ai_max_tokens'),
         this.getSettingByKey('ai_temperature'),
+        this.getSettingByKey('ai_concurrency'),
       ]);
 
       return {
-        apiUrl: configs[0]?.value || '',
-        apiKey: configs[1]?.value || '',
-        modelName: configs[2]?.value || 'gpt-3.5-turbo',
+        platform: configs[0]?.value || '',
+        apiUrl: configs[1]?.value || '',
+        apiKey: configs[2]?.value || '',
         maxTokens: parseInt(configs[3]?.value || '2000'),
         temperature: parseFloat(configs[4]?.value || '0.7'),
+        concurrency: parseInt(configs[5]?.value || '3'),
       };
     } catch (error) {
       console.error('获取AI配置失败:', error);
@@ -124,14 +126,23 @@ export class SettingsService {
 
   // 保存AI模型配置
   static async saveAIConfig(config: {
+    platform?: string;
     apiUrl?: string;
     apiKey?: string;
-    modelName?: string;
     maxTokens?: number;
     temperature?: number;
+    concurrency?: number;
   }): Promise<void> {
     try {
       const settingsToUpdate = [];
+
+      if (config.platform !== undefined) {
+        settingsToUpdate.push({
+          key: 'ai_platform',
+          value: config.platform,
+          description: 'AI平台类型'
+        });
+      }
 
       if (config.apiUrl !== undefined) {
         settingsToUpdate.push({
@@ -149,14 +160,6 @@ export class SettingsService {
         });
       }
 
-      if (config.modelName !== undefined) {
-        settingsToUpdate.push({
-          key: 'ai_model_name',
-          value: config.modelName,
-          description: 'AI模型名称'
-        });
-      }
-
       if (config.maxTokens !== undefined) {
         settingsToUpdate.push({
           key: 'ai_max_tokens',
@@ -170,6 +173,14 @@ export class SettingsService {
           key: 'ai_temperature',
           value: config.temperature.toString(),
           description: '生成温度参数'
+        });
+      }
+
+      if (config.concurrency !== undefined) {
+        settingsToUpdate.push({
+          key: 'ai_concurrency',
+          value: config.concurrency.toString(),
+          description: '并发请求数量'
         });
       }
 
@@ -248,9 +259,12 @@ export class SettingsService {
       
       // 重新创建默认设置
       const defaultSettings = [
-        { key: 'ai_model_name', value: 'gpt-3.5-turbo', description: 'AI模型名称' },
+        { key: 'ai_platform', value: '', description: 'AI平台类型' },
+        { key: 'ai_api_url', value: '', description: 'AI模型API地址' },
+        { key: 'ai_api_key', value: '', description: 'AI模型API密钥' },
         { key: 'ai_max_tokens', value: '2000', description: '最大生成令牌数' },
         { key: 'ai_temperature', value: '0.7', description: '生成温度参数' },
+        { key: 'ai_concurrency', value: '3', description: '并发请求数量' },
         { key: 'app_theme', value: 'light', description: '应用主题' },
         { key: 'app_language', value: 'zh-CN', description: '应用语言' },
         { key: 'app_auto_save', value: 'true', description: '自动保存' },

@@ -8,8 +8,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../components/ui/select";
-import PromptSettingsModal from '../components/questions/prompt-settings-modal';
+} from "@/components/ui/select";
+import PromptSettingsModal from '@/components/questions/prompt-settings-modal';
 
 interface Project {
   id: number;

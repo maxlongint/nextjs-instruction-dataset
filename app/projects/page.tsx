@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiPlus, FiEdit, FiTrash2 } from 'react-icons/fi';
-import ProjectFormModal from '../components/projects/project-form-modal';
-import ConfirmModal from '../components/common/confirm-modal';
+import ProjectFormModal from '@/components/projects/project-form-modal';
+import ConfirmModal from '@/components/common/confirm-modal';
 
 interface Project {
   id: number;

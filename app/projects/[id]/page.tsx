@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FiArrowLeft, FiUpload, FiFile, FiEdit, FiTrash2, FiDownload, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { FiAlertCircle, FiX, FiRefreshCw } from 'react-icons/fi';
-import ConfirmModal from '../../components/common/confirm-modal';
+import ConfirmModal from '@/components/common/confirm-modal';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/select";
+} from "@/components/ui/select";
 
 interface Project {
   id: number;

@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { QuestionService } from '../../lib/services/question-service';
 
-// GET - 获取问题列表
+// GET - 获取问题列表（支持分页和数据集筛选）
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
     const datasetId = searchParams.get('datasetId');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '30');
 
-    let questions;
-    if (projectId && datasetId) {
-      // 获取特定数据集的问题
-      questions = await QuestionService.getQuestionsByDataset(parseInt(datasetId));
-    } else if (projectId) {
-      // 获取项目的所有问题
-      questions = await QuestionService.getQuestionsByProject(parseInt(projectId));
-    } else {
+    if (!projectId) {
       return NextResponse.json(
         {
           success: false,
@@ -25,9 +20,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 获取问题列表（支持分页和数据集筛选）
+    const result = await QuestionService.getQuestionsWithPagination({
+      projectId: parseInt(projectId),
+      datasetId: datasetId ? parseInt(datasetId) : undefined,
+      page,
+      limit
+    });
+
     return NextResponse.json({
       success: true,
-      data: questions,
+      data: result,
     });
   } catch (error) {
     console.error('获取问题列表失败:', error);
@@ -45,11 +48,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { questions: questionsData, single } = body;
+    const { projectId, datasetId, prompt, content, generatedQuestion } = body;
 
-    if (single) {
+    if (projectId && datasetId && prompt && content && generatedQuestion) {
       // 创建单个问题
-      const { projectId, datasetId, prompt, content, generatedQuestion } = questionsData;
 
       if (!projectId || !datasetId || !prompt || !content || !generatedQuestion) {
         return NextResponse.json(
@@ -61,22 +63,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const question = await QuestionService.createQuestion({
-        projectId,
-        datasetId,
-        prompt,
-        content,
-        generatedQuestion,
-        status: 'generated',
-      });
+      const question = await QuestionService.createQuestion(body);
 
       return NextResponse.json({
         success: true,
         data: question,
       });
-    } else {
+    } else if (Array.isArray(body)) {
       // 批量创建问题
-      if (!Array.isArray(questionsData) || questionsData.length === 0) {
+      if (body.length === 0) {
         return NextResponse.json(
           {
             success: false,
@@ -86,7 +81,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const questions = await QuestionService.createQuestions(questionsData);
+      const questions = await QuestionService.createQuestions(body);
 
       return NextResponse.json({
         success: true,

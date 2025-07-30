@@ -47,7 +47,6 @@ export class SettingsService {
           .set({ 
             value, 
             description: description || existingSetting.description,
-            updatedAt: new Date().toISOString()
           })
           .where(eq(settings.key, key))
           .returning();
@@ -58,7 +57,6 @@ export class SettingsService {
           key,
           value,
           description,
-          updatedAt: new Date().toISOString(),
         }).returning();
         return result[0];
       }
@@ -88,10 +86,7 @@ export class SettingsService {
   // 删除设置
   static async deleteSetting(key: string): Promise<void> {
     try {
-      const result = await db.delete(settings).where(eq(settings.key, key));
-      if (result.changes === 0) {
-        throw new Error('设置不存在');
-      }
+      await db.delete(settings).where(eq(settings.key, key));
     } catch (error) {
       console.error('删除设置失败:', error);
       throw new Error('删除设置失败');
@@ -105,6 +100,7 @@ export class SettingsService {
         this.getSettingByKey('ai_platform'),
         this.getSettingByKey('ai_api_url'),
         this.getSettingByKey('ai_api_key'),
+        this.getSettingByKey('ai_model'),
         this.getSettingByKey('ai_max_tokens'),
         this.getSettingByKey('ai_temperature'),
         this.getSettingByKey('ai_concurrency'),
@@ -114,9 +110,10 @@ export class SettingsService {
         platform: configs[0]?.value || '',
         apiUrl: configs[1]?.value || '',
         apiKey: configs[2]?.value || '',
-        maxTokens: parseInt(configs[3]?.value || '2000'),
-        temperature: parseFloat(configs[4]?.value || '0.7'),
-        concurrency: parseInt(configs[5]?.value || '3'),
+        model: configs[3]?.value || '',
+        maxTokens: parseInt(configs[4]?.value || '2000'),
+        temperature: parseFloat(configs[5]?.value || '0.7'),
+        concurrency: parseInt(configs[6]?.value || '3'),
       };
     } catch (error) {
       console.error('获取AI配置失败:', error);
@@ -129,6 +126,7 @@ export class SettingsService {
     platform?: string;
     apiUrl?: string;
     apiKey?: string;
+    model?: string;
     maxTokens?: number;
     temperature?: number;
     concurrency?: number;
@@ -157,6 +155,14 @@ export class SettingsService {
           key: 'ai_api_key',
           value: config.apiKey,
           description: 'AI模型API密钥'
+        });
+      }
+
+      if (config.model !== undefined) {
+        settingsToUpdate.push({
+          key: 'ai_model',
+          value: config.model,
+          description: 'AI模型名称'
         });
       }
 
@@ -262,6 +268,7 @@ export class SettingsService {
         { key: 'ai_platform', value: '', description: 'AI平台类型' },
         { key: 'ai_api_url', value: '', description: 'AI模型API地址' },
         { key: 'ai_api_key', value: '', description: 'AI模型API密钥' },
+        { key: 'ai_model', value: '', description: 'AI模型名称' },
         { key: 'ai_max_tokens', value: '2000', description: '最大生成令牌数' },
         { key: 'ai_temperature', value: '0.7', description: '生成温度参数' },
         { key: 'ai_concurrency', value: '3', description: '并发请求数量' },

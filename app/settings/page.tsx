@@ -530,7 +530,7 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 界面主题
               </label>
-              <Select value={appConfig.theme || "light"} onValueChange={(value: string) => setAppConfig({ ...appConfig, theme: value })}>
+              <Select value={appConfig.theme || "light"} onValueChange={(value) => setAppConfig({ ...appConfig, theme: value })}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="选择主题" />
                 </SelectTrigger>
@@ -546,7 +546,7 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 界面语言
               </label>
-              <Select value={appConfig.language || "zh-CN"} onValueChange={(value: string) => setAppConfig({ ...appConfig, language: value })}>
+              <Select value={appConfig.language || "zh-CN"} onValueChange={(value) => setAppConfig({ ...appConfig, language: value })}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="选择语言" />
                 </SelectTrigger>
@@ -735,10 +735,8 @@ export default function SettingsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction 
-              onClick={() => {
-                setShowConfirmDialog(false);
-              }}
+            <AlertDialogAction
+              onClick={() => setShowConfirmDialog(false)}
               className="bg-gray-200 text-gray-800 hover:bg-gray-300"
             >
               取消

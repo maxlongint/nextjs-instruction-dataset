@@ -4,11 +4,10 @@ import { ProjectService } from '../../../lib/services/project-service';
 // GET - 获取单个项目
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id: idParam } = await params;
-    const id = parseInt(idParam);
+    const id = parseInt(params.id);
     if (isNaN(id)) {
       return NextResponse.json(
         {

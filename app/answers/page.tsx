@@ -16,6 +16,14 @@ interface Project {
   description: string | null;
 }
 
+interface Dataset {
+  id: number;
+  projectId: number;
+  name: string;
+  description: string | null;
+  createdAt: string;
+}
+
 interface Question {
   id: number;
   projectId: number;
@@ -41,14 +49,18 @@ interface QuestionWithAnswer extends Question {
 
 export default function AnswersPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [questionsWithAnswers, setQuestionsWithAnswers] = useState<QuestionWithAnswer[]>([]);
   const [selectedProject, setSelectedProject] = useState('');
+  const [selectedDataset, setSelectedDataset] = useState('');
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
   const [prompt, setPrompt] = useState('请基于以下问题提供详细的答案：\n\n{question}');
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [generatingProgress, setGeneratingProgress] = useState({ current: 0, total: 0 });
 
   // 获取项目列表
   const fetchProjects = async () => {
@@ -63,13 +75,36 @@ export default function AnswersPage() {
     }
   };
 
+  // 获取数据集列表
+  const fetchDatasets = async (projectId: string) => {
+    try {
+      const response = await fetch(`/api/datasets?projectId=${projectId}`);
+      const result = await response.json();
+      if (result.success) {
+        setDatasets(result.data);
+      }
+    } catch (error) {
+      console.error('获取数据集列表失败:', error);
+    }
+  };
+
   // 获取问题列表
-  const fetchQuestions = async (projectId?: string) => {
+  const fetchQuestions = async (projectId?: string, datasetId?: string) => {
     try {
       setLoading(true);
-      const url = projectId 
-        ? `/api/questions?projectId=${projectId}`
-        : '/api/questions?projectId=1';
+      let url = '/api/questions';
+      const params = new URLSearchParams();
+      
+      if (projectId) {
+        params.append('projectId', projectId);
+      }
+      if (datasetId) {
+        params.append('datasetId', datasetId);
+      }
+      
+      if (params.toString()) {
+        url += '?' + params.toString();
+      }
       
       const response = await fetch(url);
       const result = await response.json();
@@ -98,6 +133,12 @@ export default function AnswersPage() {
 
   // 合并问题和答案数据
   const mergeQuestionsAndAnswers = () => {
+    if (!Array.isArray(questions) || !Array.isArray(answers)) {
+      console.error('合并问题和答案失败: questions或answers不是数组', { questions, answers });
+      setQuestionsWithAnswers([]);
+      return;
+    }
+    
     const merged = questions.map(question => {
       const answer = answers.find(a => a.questionId === question.id);
       return {
@@ -110,15 +151,22 @@ export default function AnswersPage() {
 
   useEffect(() => {
     fetchProjects();
-    fetchQuestions();
     fetchAnswers();
   }, []);
 
   useEffect(() => {
     if (selectedProject) {
-      fetchQuestions(selectedProject);
+      fetchDatasets(selectedProject);
+      setSelectedDataset('');
+      setQuestions([]);
     }
   }, [selectedProject]);
+
+  useEffect(() => {
+    if (selectedProject && selectedDataset) {
+      fetchQuestions(selectedProject, selectedDataset);
+    }
+  }, [selectedProject, selectedDataset]);
 
   useEffect(() => {
     mergeQuestionsAndAnswers();
@@ -133,6 +181,17 @@ export default function AnswersPage() {
 
     try {
       setGenerating(true);
+      setGeneratingProgress({ current: 0, total: selectedQuestions.length });
+      
+      // 模拟进度更新
+      const progressInterval = setInterval(() => {
+        setGeneratingProgress(prev => {
+          if (prev.current < prev.total) {
+            return { ...prev, current: prev.current + 1 };
+          }
+          return prev;
+        });
+      }, 1000);
       
       const response = await fetch('/api/answers/generate', {
         method: 'POST',
@@ -147,10 +206,13 @@ export default function AnswersPage() {
 
       const result = await response.json();
       
+      clearInterval(progressInterval);
+      
       if (result.success) {
+        setGeneratingProgress({ current: selectedQuestions.length, total: selectedQuestions.length });
         alert(`成功生成 ${result.data.total} 个答案！`);
         await fetchAnswers(); // 重新获取答案列表
-        await fetchQuestions(selectedProject); // 重新获取问题列表
+        await fetchQuestions(selectedProject, selectedDataset); // 重新获取问题列表
         setSelectedQuestions([]); // 清空选择
       } else {
         alert('生成答案失败: ' + result.error);
@@ -160,6 +222,7 @@ export default function AnswersPage() {
       alert('生成答案失败');
     } finally {
       setGenerating(false);
+      setGeneratingProgress({ current: 0, total: 0 });
     }
   };
 
@@ -210,6 +273,12 @@ export default function AnswersPage() {
     return project?.name || '未知项目';
   };
 
+  // 获取数据集名称
+  const getDatasetName = (datasetId: number) => {
+    const dataset = datasets.find(d => d.id === datasetId);
+    return dataset?.name || '未知数据集';
+  };
+
   return (
     <div className="space-y-6">
       {/* 页面头部 */}
@@ -218,19 +287,27 @@ export default function AnswersPage() {
           <h1 className="text-2xl font-bold text-gray-900">答案生成</h1>
           <p className="text-gray-600 mt-1">为生成的问题创建对应答案</p>
         </div>
-        <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-          <FiDownload className="mr-2 h-4 w-4" />
-          导出问答对
-        </button>
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => setShowPromptModal(true)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <FiSettings className="mr-2 h-4 w-4" />
+            提示词配置
+          </button>
+          <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+            <FiDownload className="mr-2 h-4 w-4" />
+            导出问答对
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 左侧：问题选择和提示词配置 */}
-        <div className="space-y-6">
-          {/* 项目选择 */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">项目选择</h3>
-            
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 左侧：项目和数据集选择 + 问题列表 */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">项目和数据集选择</h3>
+          
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 选择项目
@@ -248,28 +325,95 @@ export default function AnswersPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {selectedProject && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  选择数据集
+                </label>
+                <Select value={selectedDataset} onValueChange={setSelectedDataset}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="请选择数据集" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {datasets.map((dataset) => (
+                      <SelectItem key={dataset.id} value={dataset.id.toString()}>
+                        {dataset.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
           </div>
 
-          {/* 提示词配置 */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">答案提示词配置</h3>
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <FiSettings className="h-4 w-4" />
-              </button>
-            </div>
-            
-            <textarea
-              className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              placeholder="请输入答案生成的提示词模板..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-            />
-            
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-500">
-                支持使用 {'{question}'} 作为问题占位符
+          {/* 问题列表 */}
+          {selectedProject && selectedDataset && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-md font-semibold text-gray-900">问题列表</h4>
+                <button 
+                  onClick={toggleSelectAll}
+                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  {selectedQuestions.length === questionsWithAnswers.filter(q => !q.answer).length ? '取消全选' : '全选'}
+                </button>
               </div>
+              
+              {loading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-sm text-gray-600">加载中...</span>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {questionsWithAnswers.length === 0 ? (
+                    <div className="text-center py-4 text-sm text-gray-500">
+                      该数据集暂无问题数据
+                    </div>
+                  ) : (
+                    questionsWithAnswers.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`border border-gray-200 rounded p-3 text-sm transition-colors ${
+                          item.answer ? 'bg-green-50 border-green-200' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-start space-x-2">
+                          {!item.answer && (
+                            <input
+                              type="checkbox"
+                              checked={selectedQuestions.includes(item.id)}
+                              onChange={() => toggleQuestionSelection(item.id)}
+                              className="mt-0.5 h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900 line-clamp-2">
+                              {item.generatedQuestion}
+                            </div>
+                            {item.answer && (
+                              <div className="mt-1 text-xs text-green-600">
+                                ✓ 已生成答案
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 右侧：答案列表和结果 */}
+        <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">答案列表</h3>
+            <div className="flex items-center space-x-3">
               <button 
                 onClick={handleGenerateAnswers}
                 disabled={generating || selectedQuestions.length === 0}
@@ -289,19 +433,22 @@ export default function AnswersPage() {
               </button>
             </div>
           </div>
-        </div>
 
-        {/* 右侧：问题列表和答案结果 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">问题列表</h3>
-            <button 
-              onClick={toggleSelectAll}
-              className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-            >
-              {selectedQuestions.length === questionsWithAnswers.filter(q => !q.answer).length ? '取消全选' : '全选'}
-            </button>
-          </div>
+          {/* 生成进度 */}
+          {generating && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-blue-900">正在生成答案...</span>
+                <span className="text-sm text-blue-700">{generatingProgress.current} / {generatingProgress.total}</span>
+              </div>
+              <div className="w-full bg-blue-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                  style={{ width: `${generatingProgress.total > 0 ? (generatingProgress.current / generatingProgress.total) * 100 : 0}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
           
           {loading ? (
             <div className="flex items-center justify-center py-8">
@@ -310,9 +457,17 @@ export default function AnswersPage() {
             </div>
           ) : (
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {questionsWithAnswers.length === 0 ? (
+              {!selectedProject ? (
                 <div className="text-center py-8 text-gray-500">
-                  暂无问题数据
+                  请先选择项目
+                </div>
+              ) : !selectedDataset ? (
+                <div className="text-center py-8 text-gray-500">
+                  请选择数据集
+                </div>
+              ) : questionsWithAnswers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  该数据集暂无问题数据
                 </div>
               ) : (
                 questionsWithAnswers.map((item) => (
@@ -334,7 +489,7 @@ export default function AnswersPage() {
                         )}
                         <div className="flex-1">
                           <div className="text-sm text-gray-500 mb-1">
-                            {getProjectName(item.projectId)}
+                            {getProjectName(item.projectId)} / {getDatasetName(item.datasetId)}
                           </div>
                           <div className="font-medium text-gray-900 mb-2">
                             {item.generatedQuestion}
@@ -383,6 +538,52 @@ export default function AnswersPage() {
           )}
         </div>
       </div>
+
+      {/* 提示词配置弹框 */}
+      {showPromptModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">答案提示词配置</h3>
+              <button 
+                onClick={() => setShowPromptModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <textarea
+              className="w-full h-40 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              placeholder="请输入答案生成的提示词模板..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+            />
+            
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                支持使用 {'{question}'} 作为问题占位符
+              </div>
+              <div className="flex items-center space-x-3">
+                <button 
+                  onClick={() => setShowPromptModal(false)}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  取消
+                </button>
+                <button 
+                  onClick={() => setShowPromptModal(false)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

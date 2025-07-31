@@ -183,7 +183,14 @@ export default function ProjectDetailPage() {
           size: file.size,
           content: content,
           segmentDelimiter: '\n\n',
-          segmentCount: segments.length
+          segmentCount: content.split('\n\n').filter(s => s.trim().length > 0).length,
+          status: 'ready',
+          uploadProgress: 100,
+          encoding: 'UTF-8',
+          language: 'zh-CN',
+          tags: ['上传文件'],
+          isPublic: false,
+          downloadCount: 0
         });
 
       clearInterval(progressInterval);

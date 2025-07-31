@@ -53,7 +53,19 @@ export default function ProjectsPage() {
       
       const newProject = projectService.create({
         name: data.name,
-        description: data.description || undefined
+        description: data.description,
+        status: 'active',
+        priority: 'medium',
+        category: '默认分类',
+        tags: [],
+        ownerId: 1, // 默认所有者
+        memberIds: [1],
+        progress: 0,
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90天后
+        estimatedHours: 40,
+        actualHours: 0,
+        budget: 10000
       });
       
       if (newProject) {
@@ -128,7 +140,8 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-y-auto">
+      <div className="space-y-6 pl-1 pr-4 py-1">
       {/* 页面头部 */}
       <div className="flex items-center justify-between">
         <div>
@@ -260,6 +273,7 @@ export default function ProjectsPage() {
         type="danger"
         isLoading={isSubmitting}
       />
-    </div>
+        </div>
+      </div>
   );
 }

@@ -615,15 +615,29 @@ export default function QuestionsPage() {
           
           const generatedQuestion = mockQuestions[Math.floor(Math.random() * mockQuestions.length)];
           
-          const newQuestion = questionService.create({
-            projectId: parseInt(selectedProject),
-            datasetId: parseInt(selectedDataset),
-            prompt: segment.prompt,
-            content: segment.content,
-            generatedQuestion: generatedQuestion,
-            wordCount: generatedQuestion.length,
-            status: 'generated'
-          });
+        const newQuestion = questionService.create({
+          uid: `q_${Date.now()}`,
+          projectId: parseInt(selectedProject),
+          datasetId: parseInt(selectedDataset),
+          segmentId: segment.segmentId,
+          prompt: `基于以下内容生成问题：\n\n${segment.content}`,
+          content: segment.content,
+          generatedQuestion: `基于"${segment.content.substring(0, 20)}..."的问题`,
+          wordCount: segment.content.length,
+          status: 'generated',
+          type: 'short_answer',
+          difficulty: 'medium',
+          category: '自动生成',
+          tags: ['自动生成'],
+          points: 10,
+          timeLimit: 300,
+          hints: [],
+          explanation: '',
+          references: [],
+          isPublic: false,
+          usageCount: 0,
+          updatedAt: new Date().toISOString()
+        });
 
           results.push({
             success: true,
@@ -754,7 +768,8 @@ export default function QuestionsPage() {
   };
 
   return (
-    <div className="h-full flex flex-col space-y-6">
+    <div className="h-full overflow-y-auto">
+      <div className="flex flex-col space-y-6 pl-1 pr-4 py-1">
       {/* 页面头部 */}
       <div className="flex items-center justify-between">
         <div>
@@ -1378,6 +1393,7 @@ export default function QuestionsPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -18,13 +18,25 @@ export const useProjects = create<ProjectStore>()(
       projects: mockProjects,
       
       addProject: (data) => {
-        const newProject: Project = {
-          id: Date.now(),
-          name: data.name,
-          description: data.description,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+    const newProject: Project = {
+      id: Date.now(),
+      name: data.name,
+      description: data.description,
+      status: 'active',
+      priority: 'medium',
+      category: '默认分类',
+      tags: [],
+      ownerId: 1,
+      memberIds: [1],
+      progress: 0,
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      estimatedHours: 40,
+      actualHours: 0,
+      budget: 10000,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
         
         set((state) => ({
           projects: [...state.projects, newProject]
@@ -77,22 +89,31 @@ export const useDatasets = create<DatasetStore>()(
       datasets: mockDatasets,
       
       addDataset: (data) => {
-        const newDataset: Dataset = {
-          id: Date.now(),
-          projectId: data.projectId,
-          name: data.name,
-          fileName: data.fileName,
-          filePath: data.filePath,
-          fileSize: data.fileSize,
-          description: data.description || '',
-          type: data.type || 'text',
-          size: data.size || 0,
-          segmentCount: data.segmentCount || 0,
-          content: data.content || '',
-          segmentDelimiter: data.segmentDelimiter || '\n\n',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+    const newDataset: Dataset = {
+      id: Date.now(),
+      projectId: data.projectId,
+      name: data.name,
+      fileName: data.fileName,
+      filePath: data.filePath,
+      fileSize: data.fileSize,
+      description: data.description,
+      type: data.type,
+      size: data.size,
+      content: data.content,
+      segmentDelimiter: data.segmentDelimiter,
+      segmentCount: data.segmentCount,
+      status: data.status || 'ready',
+      uploadProgress: data.uploadProgress || 100,
+      encoding: data.encoding || 'UTF-8',
+      language: data.language || 'zh-CN',
+      metadata: data.metadata,
+      tags: data.tags || [],
+      isPublic: data.isPublic || false,
+      downloadCount: data.downloadCount || 0,
+      lastAccessedAt: data.lastAccessedAt,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
         
         set((state) => ({
           datasets: [...state.datasets, newDataset]
@@ -150,18 +171,30 @@ export const useQuestions = create<QuestionStore>()(
       questions: mockQuestions,
       
       addQuestion: (data) => {
-        const newQuestion: Question = {
-          id: Date.now(),
-          projectId: data.projectId,
-          datasetId: data.datasetId,
-          segmentId: data.segmentId,
-          content: data.content,
-          type: data.type || 'generated',
-          difficulty: data.difficulty || 'medium',
-          category: data.category || 'general',
-          tags: data.tags || [],
-          createdAt: new Date().toISOString()
-        };
+    const newQuestion: Question = {
+      id: Date.now(),
+      uid: `q_${Date.now()}`,
+      projectId: data.projectId,
+      datasetId: data.datasetId,
+      segmentId: data.segmentId,
+      prompt: data.prompt || '基于以下内容生成问题：',
+      content: data.content,
+      generatedQuestion: data.generatedQuestion || data.content,
+      wordCount: data.content.length,
+      status: 'generated',
+      type: data.type || 'short_answer',
+      difficulty: data.difficulty || 'medium',
+      category: data.category || '默认分类',
+      tags: data.tags || [],
+      points: 10,
+      timeLimit: 300,
+      isPublic: false,
+      usageCount: 0,
+      rating: 0,
+      ratingCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
         
         set((state) => ({
           questions: [...state.questions, newQuestion]
@@ -223,8 +256,23 @@ export const useAnswers = create<AnswerStore>()(
         const newAnswer: Answer = {
           id: Date.now(),
           questionId: data.questionId,
-          segmentId: data.segmentId,
-          content: data.content || '',
+          prompt: data.prompt || '请为以下问题提供详细答案：',
+          generatedAnswer: data.generatedAnswer || data.content || '',
+          content: data.content,
+          type: data.type || 'generated',
+          status: data.status || 'generated',
+          isCorrect: data.isCorrect,
+          confidence: data.confidence,
+          wordCount: data.content?.length || 0,
+          language: data.language || 'zh-CN',
+          sources: data.sources,
+          reviewerId: data.reviewerId,
+          reviewedAt: data.reviewedAt,
+          reviewComments: data.reviewComments,
+          rating: data.rating,
+          ratingCount: data.ratingCount,
+          usageCount: data.usageCount || 0,
+          lastUsedAt: data.lastUsedAt,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };

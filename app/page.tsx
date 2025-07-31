@@ -35,7 +35,8 @@ export default function HomePage() {
     .slice(0, 5);
 
   return (
-    <div className="space-y-8">
+    <div className="h-full overflow-y-auto">
+      <div className="space-y-8 pl-1 pr-4 py-1">
       {/* 欢迎区域 */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-white">
         <h1 className="text-3xl font-bold mb-2">欢迎使用指令数据集生成平台</h1>
@@ -337,6 +338,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

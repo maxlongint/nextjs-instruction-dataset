@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
+  const router = useRouter();
   const [currentTime, setCurrentTime] = useState<string>('');
   const [mounted, setMounted] = useState(false);
 
@@ -26,10 +28,18 @@ export default function Header() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleTitleClick = () => {
+    router.push('/');
+  };
+
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
       <div className="flex items-center">
-        <h1 className="text-xl font-semibold text-gray-900">
+        <h1 
+          className="text-xl font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+          onClick={handleTitleClick}
+          title="返回首页"
+        >
           指令监督微调生成器
         </h1>
       </div>

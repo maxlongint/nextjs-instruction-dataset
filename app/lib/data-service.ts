@@ -1,4 +1,27 @@
-import { Project, Dataset, Question, Answer, QuestionTemplate, PromptTemplate } from '../types';
+import { 
+  Project, 
+  Dataset, 
+  Question, 
+  Answer, 
+  QuestionTemplate, 
+  PromptTemplate, 
+  User, 
+  Setting, 
+  QuestionGenerationTask, 
+  ProjectStats 
+} from '../types';
+import { 
+  mockUsers, 
+  mockSettings, 
+  mockQuestionGenerationTasks, 
+  mockProjectStats,
+  mockProjects,
+  mockDatasets,
+  mockQuestions,
+  mockAnswers,
+  getPaginatedData,
+  generateMockData
+} from './mock-data';
 
 // 项目服务
 export const projectService = {
@@ -465,4 +488,411 @@ export const templateService = {
 
     return category ? templates.filter(t => t.category === category) : templates;
   }
+};
+
+// 用户服务
+export const userService = {
+  getAll: (): User[] => {
+    if (typeof window === 'undefined') return mockUsers;
+    
+    try {
+      const stored = localStorage.getItem('app-store');
+      if (stored) {
+        const data = JSON.parse(stored);
+        return data.state?.users || mockUsers;
+      }
+    } catch (error) {
+      console.error('获取用户数据失败:', error);
+    }
+    return mockUsers;
+  },
+
+  getById: (id: number): User | null => {
+    const users = userService.getAll();
+    return users.find(u => u.id === id) || null;
+  },
+
+  getCurrentUser: (): User | null => {
+    // 模拟当前登录用户，实际应用中应该从认证系统获取
+    return mockUsers[0] || null;
+  },
+
+  create: (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): User => {
+    const newUser: User = {
+      ...userData,
+      id: Date.now(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('app-store');
+        const data = stored ? JSON.parse(stored) : { state: {} };
+        
+        if (!data.state.users) data.state.users = [...mockUsers];
+        data.state.users.push(newUser);
+        
+        localStorage.setItem('app-store', JSON.stringify(data));
+      } catch (error) {
+        console.error('保存用户数据失败:', error);
+      }
+    }
+
+    return newUser;
+  },
+
+  update: (id: number, updates: Partial<User>): boolean => {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      const stored = localStorage.getItem('app-store');
+      if (!stored) return false;
+      
+      const data = JSON.parse(stored);
+      if (!data.state?.users) data.state.users = [...mockUsers];
+      
+      const index = data.state.users.findIndex((u: User) => u.id === id);
+      if (index === -1) return false;
+      
+      data.state.users[index] = {
+        ...data.state.users[index],
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem('app-store', JSON.stringify(data));
+      return true;
+    } catch (error) {
+      console.error('更新用户数据失败:', error);
+      return false;
+    }
+  }
+};
+
+// 设置服务
+export const settingService = {
+  getAll: (): Setting[] => {
+    if (typeof window === 'undefined') return mockSettings;
+    
+    try {
+      const stored = localStorage.getItem('app-store');
+      if (stored) {
+        const data = JSON.parse(stored);
+        return data.state?.settings || mockSettings;
+      }
+    } catch (error) {
+      console.error('获取设置数据失败:', error);
+    }
+    return mockSettings;
+  },
+
+  getByKey: (key: string): Setting | null => {
+    const settings = settingService.getAll();
+    return settings.find(s => s.key === key) || null;
+  },
+
+  getValue: (key: string, defaultValue?: string): string => {
+    const setting = settingService.getByKey(key);
+    return setting?.value || defaultValue || '';
+  },
+
+  update: (key: string, value: string): boolean => {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      const stored = localStorage.getItem('app-store');
+      const data = stored ? JSON.parse(stored) : { state: {} };
+      
+      if (!data.state.settings) data.state.settings = [...mockSettings];
+      
+      const index = data.state.settings.findIndex((s: Setting) => s.key === key);
+      if (index !== -1) {
+        data.state.settings[index] = {
+          ...data.state.settings[index],
+          value,
+          updatedAt: new Date().toISOString()
+        };
+      } else {
+        // 创建新设置
+        data.state.settings.push({
+          id: Date.now(),
+          key,
+          value,
+          description: `用户自定义设置: ${key}`,
+          updatedAt: new Date().toISOString()
+        });
+      }
+      
+      localStorage.setItem('app-store', JSON.stringify(data));
+      return true;
+    } catch (error) {
+      console.error('更新设置数据失败:', error);
+      return false;
+    }
+  }
+};
+
+// 问题生成任务服务
+export const taskService = {
+  getAll: (projectId?: number): QuestionGenerationTask[] => {
+    if (typeof window === 'undefined') return mockQuestionGenerationTasks;
+    
+    try {
+      const stored = localStorage.getItem('app-store');
+      if (stored) {
+        const data = JSON.parse(stored);
+        let tasks = data.state?.tasks || mockQuestionGenerationTasks;
+        
+        if (projectId) {
+          tasks = tasks.filter((t: QuestionGenerationTask) => t.projectId === projectId);
+        }
+        
+        return tasks;
+      }
+    } catch (error) {
+      console.error('获取任务数据失败:', error);
+    }
+    return mockQuestionGenerationTasks;
+  },
+
+  getById: (id: number): QuestionGenerationTask | null => {
+    const tasks = taskService.getAll();
+    return tasks.find(t => t.id === id) || null;
+  },
+
+  create: (taskData: Omit<QuestionGenerationTask, 'id' | 'createdAt' | 'updatedAt'>): QuestionGenerationTask => {
+    const newTask: QuestionGenerationTask = {
+      ...taskData,
+      id: Date.now(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('app-store');
+        const data = stored ? JSON.parse(stored) : { state: {} };
+        
+        if (!data.state.tasks) data.state.tasks = [...mockQuestionGenerationTasks];
+        data.state.tasks.push(newTask);
+        
+        localStorage.setItem('app-store', JSON.stringify(data));
+      } catch (error) {
+        console.error('保存任务数据失败:', error);
+      }
+    }
+
+    return newTask;
+  },
+
+  update: (id: number, updates: Partial<QuestionGenerationTask>): boolean => {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      const stored = localStorage.getItem('app-store');
+      if (!stored) return false;
+      
+      const data = JSON.parse(stored);
+      if (!data.state?.tasks) data.state.tasks = [...mockQuestionGenerationTasks];
+      
+      const index = data.state.tasks.findIndex((t: QuestionGenerationTask) => t.id === id);
+      if (index === -1) return false;
+      
+      data.state.tasks[index] = {
+        ...data.state.tasks[index],
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem('app-store', JSON.stringify(data));
+      return true;
+    } catch (error) {
+      console.error('更新任务数据失败:', error);
+      return false;
+    }
+  }
+};
+
+// 统计服务
+export const statsService = {
+  getProjectStats: (): ProjectStats => {
+    if (typeof window === 'undefined') return mockProjectStats;
+    
+    try {
+      const projects = projectService.getAll();
+      const datasets = datasetService.getAll();
+      const questions = questionService.getAll();
+      const answers = answerService.getAll();
+      const users = userService.getAll();
+
+      // 计算实时统计数据
+      const stats: ProjectStats = {
+        totalProjects: projects.length,
+        activeProjects: projects.filter(p => p.status === 'active').length,
+        completedProjects: projects.filter(p => p.status === 'completed').length,
+        totalQuestions: questions.length,
+        answeredQuestions: answers.length,
+        totalDatasets: datasets.length,
+        totalUsers: users.length,
+        recentActivity: mockProjectStats.recentActivity // 使用模拟的活动数据
+      };
+
+      return stats;
+    } catch (error) {
+      console.error('获取统计数据失败:', error);
+      return mockProjectStats;
+    }
+  },
+
+  getProjectProgress: (projectId: number): { completed: number; total: number; percentage: number } => {
+    try {
+      const questions = questionService.getAll(projectId);
+      const answers = answerService.getAll();
+      
+      const projectAnswers = answers.filter(a => 
+        questions.some(q => q.id === a.questionId)
+      );
+
+      const total = questions.length;
+      const completed = projectAnswers.length;
+      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      return { completed, total, percentage };
+    } catch (error) {
+      console.error('获取项目进度失败:', error);
+      return { completed: 0, total: 0, percentage: 0 };
+    }
+  }
+};
+
+// 数据初始化服务
+export const dataInitService = {
+  // 初始化模拟数据到本地存储
+  initializeMockData: (): void => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const stored = localStorage.getItem('app-store');
+      if (!stored) {
+        const initialData = {
+          state: {
+            projects: mockProjects,
+            datasets: mockDatasets,
+            questions: mockQuestions,
+            answers: mockAnswers,
+            users: mockUsers,
+            settings: mockSettings,
+            tasks: mockQuestionGenerationTasks
+          }
+        };
+        
+        localStorage.setItem('app-store', JSON.stringify(initialData));
+        console.log('模拟数据初始化完成');
+      }
+    } catch (error) {
+      console.error('初始化模拟数据失败:', error);
+    }
+  },
+
+  // 重置所有数据
+  resetAllData: (): void => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      localStorage.removeItem('app-store');
+      dataInitService.initializeMockData();
+      console.log('数据重置完成');
+    } catch (error) {
+      console.error('重置数据失败:', error);
+    }
+  },
+
+  // 导出数据
+  exportData: (): string => {
+    if (typeof window === 'undefined') return '{}';
+    
+    try {
+      const stored = localStorage.getItem('app-store');
+      return stored || '{}';
+    } catch (error) {
+      console.error('导出数据失败:', error);
+      return '{}';
+    }
+  },
+
+  // 导入数据
+  importData: (jsonData: string): boolean => {
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      const data = JSON.parse(jsonData);
+      localStorage.setItem('app-store', JSON.stringify(data));
+      console.log('数据导入完成');
+      return true;
+    } catch (error) {
+      console.error('导入数据失败:', error);
+      return false;
+    }
+  }
+};
+
+// 分页和搜索工具
+export const dataUtils = {
+  // 分页数据
+  paginate: <T>(data: T[], page: number = 1, pageSize: number = 10) => {
+    return getPaginatedData(data, page, pageSize);
+  },
+
+  // 搜索过滤
+  search: <T extends Record<string, any>>(
+    data: T[], 
+    searchTerm: string, 
+    searchFields: (keyof T)[]
+  ): T[] => {
+    if (!searchTerm.trim()) return data;
+    
+    const term = searchTerm.toLowerCase();
+    return data.filter(item => 
+      searchFields.some(field => {
+        const value = item[field];
+        if (typeof value === 'string') {
+          return value.toLowerCase().includes(term);
+        }
+        if (Array.isArray(value)) {
+          return value.some(v => 
+            typeof v === 'string' && v.toLowerCase().includes(term)
+          );
+        }
+        return false;
+      })
+    );
+  },
+
+  // 排序
+  sort: <T extends Record<string, any>>(
+    data: T[], 
+    sortField: keyof T, 
+    sortOrder: 'asc' | 'desc' = 'asc'
+  ): T[] => {
+    return [...data].sort((a, b) => {
+      const aVal = a[sortField];
+      const bVal = b[sortField];
+      
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortOrder === 'asc' 
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      
+      return 0;
+    });
+  },
+
+  // 生成模拟数据
+  generateData: generateMockData
 };

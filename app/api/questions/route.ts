@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { QuestionService } from '../../lib/services/question-service';
+import { db } from '@/lib/db';
+import { datasets } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // GET - 获取问题列表（支持分页和数据集筛选）
 export async function GET(request: NextRequest) {
@@ -28,9 +31,20 @@ export async function GET(request: NextRequest) {
       limit
     });
 
+    // 获取项目下的所有数据集，用于前端筛选
+    const projectDatasets = await db.query.datasets.findMany({
+      where: eq(datasets.projectId, parseInt(projectId))
+    });
+
     return NextResponse.json({
       success: true,
-      data: result,
+      data: {
+        ...result,
+        datasets: projectDatasets.map(ds => ({
+          id: ds.id,
+          name: ds.name
+        }))
+      },
     });
   } catch (error) {
     console.error('获取问题列表失败:', error);

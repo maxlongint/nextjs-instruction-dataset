@@ -15,6 +15,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import PromptSettingsModal from '@/components/questions/prompt-settings-modal';
 import { ErrorBoundary } from '@/components/common/error-boundary';
 import { FeedbackProvider, useFeedback, useErrorHandler, useAsyncOperation } from '@/components/common/feedback-system';
@@ -138,6 +148,22 @@ function QuestionsPageContent() {
   const [generationHistory, setGenerationHistory] = useState<any[]>([]);
   const [generationStats, setGenerationStats] = useState<any>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  
+  // 问题详情对话框状态
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [currentQuestionDetail, setCurrentQuestionDetail] = useState<{
+    question?: string;
+    content?: string;
+    prompt?: string;
+    metadata?: {
+      contentLength?: number;
+      questionLength?: number;
+      promptLength?: number;
+      createdAt?: string;
+      updatedAt?: string;
+    };
+    datasetName?: string;
+  } | null>(null);
   
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -372,6 +398,17 @@ function QuestionsPageContent() {
         setTotalQuestions(result.data.total || result.data.length);
         setTotalPages(Math.ceil((result.data.total || result.data.length) / pageSize));
         setCurrentPage(page);
+        
+        // 更新结果区域的数据集筛选器选项
+        if (result.data.datasets && Array.isArray(result.data.datasets)) {
+        // 如果API返回了相关的数据集列表，更新数据集筛选选项
+        const availableDatasets = result.data.datasets.map((ds: {id: number, name: string}) => ({
+          id: ds.id.toString(),
+          name: ds.name
+        }));
+          // 这里可以设置一个状态来存储可用的数据集筛选选项
+          // setAvailableDatasetFilters(availableDatasets);
+        }
       }
     } catch (error) {
       console.error('获取问题列表失败:', error);
@@ -524,13 +561,13 @@ function QuestionsPageContent() {
     }
   }, [selectedDataset]);
 
-  // 移除结果区域数据集筛选变化时的自动获取，只在用户主动查看结果时获取
-  // useEffect(() => {
-  //   if (selectedProject) {
-  //     fetchQuestions(selectedProject, 1, resultDatasetFilter);
-  //     setCurrentPage(1);
-  //   }
-  // }, [resultDatasetFilter]);
+  // 当数据集筛选器变化时，自动获取对应的问题列表
+  useEffect(() => {
+    if (selectedProject && resultDatasetFilter) {
+      fetchQuestions(selectedProject, 1, resultDatasetFilter);
+      setCurrentPage(1);
+    }
+  }, [resultDatasetFilter]);
 
   // 简单的本地验证
   const validateConfig = useCallback(() => {
@@ -654,14 +691,17 @@ function QuestionsPageContent() {
     const selectedSegmentContents = selectedSegments.map(index => {
       if (index >= 0 && index < segments.length) {
         const content = segments[index].content;
+        const segmentId = segments[index].segmentId || `segment-${index}`;
         const processedPrompt = prompt.replace('{content}', content);
         return {
           content: content,
-          prompt: processedPrompt
+          prompt: processedPrompt,
+          segmentId: segmentId,
+          index: index
         };
       }
       return null;
-    }).filter((item): item is { content: string; prompt: string } => 
+    }).filter((item): item is { content: string; prompt: string; segmentId: string; index: number } => 
       item !== null && item.content.trim().length > 0
     );
 
@@ -673,7 +713,9 @@ function QuestionsPageContent() {
     // 为每个分段生成替换了内容的提示词
     const segmentsWithPrompts = selectedSegmentContents.map(item => ({
       content: item.content,
-      prompt: prompt.trim().replace('{content}', item.content)
+      prompt: prompt.trim().replace('{content}', item.content),
+      segmentId: item.segmentId,
+      index: item.index
     }));
     
     try {
@@ -700,7 +742,8 @@ function QuestionsPageContent() {
           model: selectedModel || 'mock', // 如果没有模型，使用mock标识
           concurrencyLimit: concurrencyLimit[0],
           enableRetry,
-          maxRetries: maxRetries[0]
+          maxRetries: maxRetries[0],
+          datasetName: datasets.find(d => d.id.toString() === selectedDataset)?.name || '未命名数据集'
         }),
       });
 
@@ -758,8 +801,11 @@ function QuestionsPageContent() {
                   percentage: 100
                 });
 
+                // 自动切换到当前数据集的筛选视图
+                setResultDatasetFilter(selectedDataset);
+                
                 // 刷新问题列表和生成历史
-                await fetchQuestions(selectedProject, currentPage, resultDatasetFilter);
+                await fetchQuestions(selectedProject, 1, selectedDataset);
                 await fetchGenerationHistory(selectedProject, selectedDataset);
                 
                 // 清空选中的分段
@@ -767,12 +813,14 @@ function QuestionsPageContent() {
 
                 // 根据实际结果显示成功或警告消息
                 const { successful, failed } = data.data.summary;
+                const datasetName = datasets.find(d => d.id.toString() === selectedDataset)?.name || '当前数据集';
+                
                 if (failed === 0) {
-                  handleSuccess(`成功生成了 ${successful} 个问题`, '生成完成');
+                  handleSuccess(`成功为"${datasetName}"生成了 ${successful} 个问题`, '生成完成');
                 } else if (successful > 0) {
-                  handleWarning(`生成完成：成功 ${successful} 个，失败 ${failed} 个`, '部分生成成功');
+                  handleWarning(`为"${datasetName}"生成完成：成功 ${successful} 个，失败 ${failed} 个`, '部分生成成功');
                 } else {
-                  handleError('所有问题生成都失败了', '生成失败');
+                  handleError(`为"${datasetName}"生成问题全部失败`, '生成失败');
                 }
                 
                 break;
@@ -832,16 +880,26 @@ function QuestionsPageContent() {
     try {
       const detail = await fetchQuestionDetail(questionId);
       if (detail) {
-        // 显示问题详情（可以用模态框或者其他方式）
-        const message = `
-问题详情：
-- 内容长度: ${detail.metadata.contentLength} 字符
-- 问题长度: ${detail.metadata.questionLength} 字符  
-- 提示词长度: ${detail.metadata.promptLength} 字符
-- 创建时间: ${new Date(detail.metadata.createdAt).toLocaleString('zh-CN')}
-- 更新时间: ${new Date(detail.metadata.updatedAt).toLocaleString('zh-CN')}
-        `;
-        alert(message);
+        // 获取数据集名称
+        const datasetName = getDatasetName(detail.question.datasetId);
+        
+        // 设置当前问题详情
+        setCurrentQuestionDetail({
+          question: detail.question.generatedQuestion,
+          content: detail.question.content,
+          prompt: detail.question.prompt,
+          metadata: {
+            contentLength: detail.metadata.contentLength,
+            questionLength: detail.metadata.questionLength,
+            promptLength: detail.metadata.promptLength,
+            createdAt: detail.metadata.createdAt,
+            updatedAt: detail.metadata.updatedAt
+          },
+          datasetName
+        });
+        
+        // 打开详情对话框
+        setDetailDialogOpen(true);
       }
     } catch (error) {
       console.error('获取问题详情失败:', error);
@@ -1211,7 +1269,14 @@ function QuestionsPageContent() {
                   <label className="text-sm text-gray-600">筛选数据集:</label>
                   <Select 
                     value={resultDatasetFilter} 
-                    onValueChange={setResultDatasetFilter}
+                    onValueChange={(value) => {
+                      setResultDatasetFilter(value);
+                      // 当筛选器变化时，立即获取对应数据集的问题
+                      if (selectedProject) {
+                        fetchQuestions(selectedProject, 1, value);
+                        setCurrentPage(1);
+                      }
+                    }}
                   >
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="全部数据集" />
@@ -1221,10 +1286,24 @@ function QuestionsPageContent() {
                       {datasets.map((dataset) => (
                         <SelectItem key={dataset.id} value={dataset.id.toString()}>
                           {dataset.name}
+                          {dataset.id.toString() === selectedDataset && " (当前)"}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      if (selectedProject) {
+                        fetchQuestions(selectedProject, currentPage, resultDatasetFilter);
+                      }
+                    }}
+                    className="flex items-center"
+                  >
+                    <FiRefreshCw className="mr-1 h-3 w-3" />
+                    刷新
+                  </Button>
                 </div>
                 
                 {/* 统计信息 */}
@@ -1271,15 +1350,31 @@ function QuestionsPageContent() {
                         className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
                       >
                       <div className="mb-2">
-                        <div className="text-sm text-gray-500 mb-1">
-                          {getProjectName(question.projectId)} / {getDatasetName(question.datasetId)}
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm text-gray-500">
+                            {getProjectName(question.projectId)} / {getDatasetName(question.datasetId)}
+                          </div>
+                          <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                            数据集: {getDatasetName(question.datasetId)}
+                          </div>
                         </div>
                         <div className="font-medium text-gray-900">
                           {question.generatedQuestion}
                         </div>
                       </div>
-                        <div className="text-xs text-gray-400">
-                          生成时间: {new Date(question.createdAt).toLocaleString('zh-CN')}
+                        <div className="flex justify-between items-center">
+                          <div className="text-xs text-gray-400">
+                            生成时间: {new Date(question.createdAt).toLocaleString('zh-CN')}
+                          </div>
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={() => handleViewQuestionDetail(question.id)}
+                              className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                            >
+                              <FiInfo className="inline mr-1 h-3 w-3" />
+                              详情
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -1348,6 +1443,81 @@ function QuestionsPageContent() {
           </div>
         </div>
       </div>
+
+      {/* 问题详情对话框 */}
+      <AlertDialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <AlertDialogContent className="max-w-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl">问题详情</AlertDialogTitle>
+            <AlertDialogDescription className="text-base text-gray-700">
+              {currentQuestionDetail?.datasetName && (
+                <div className="mb-2">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                    数据集: {currentQuestionDetail.datasetName}
+                  </span>
+                </div>
+              )}
+              
+              {currentQuestionDetail?.question && (
+                <div className="mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">生成的问题:</h3>
+                  <div className="p-3 bg-gray-50 rounded-lg text-gray-800">
+                    {currentQuestionDetail.question}
+                  </div>
+                </div>
+              )}
+              
+              {currentQuestionDetail?.content && (
+                <div className="mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">原始内容:</h3>
+                  <div className="p-3 bg-gray-50 rounded-lg text-gray-800 max-h-40 overflow-y-auto">
+                    {currentQuestionDetail.content}
+                  </div>
+                </div>
+              )}
+              
+              {currentQuestionDetail?.prompt && (
+                <div className="mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">使用的提示词:</h3>
+                  <div className="p-3 bg-gray-50 rounded-lg text-gray-800 max-h-40 overflow-y-auto">
+                    {currentQuestionDetail.prompt}
+                  </div>
+                </div>
+              )}
+              
+              {currentQuestionDetail?.metadata && (
+                <div className="mt-4 border-t pt-4">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">元数据:</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center">
+                      <span className="text-gray-600 mr-2">内容长度:</span>
+                      <span className="font-medium">{currentQuestionDetail.metadata.contentLength} 字符</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-gray-600 mr-2">问题长度:</span>
+                      <span className="font-medium">{currentQuestionDetail.metadata.questionLength} 字符</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-gray-600 mr-2">提示词长度:</span>
+                      <span className="font-medium">{currentQuestionDetail.metadata.promptLength} 字符</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-gray-600 mr-2">创建时间:</span>
+                      <span className="font-medium">
+                        {currentQuestionDetail.metadata.createdAt && 
+                          new Date(currentQuestionDetail.metadata.createdAt).toLocaleString('zh-CN')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>关闭</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* 高级设置弹框 */}
       {showAdvancedSettings && (

@@ -9,39 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-interface Project {
-  id: number;
-  name: string;
-  description: string | null;
-}
-
-interface Dataset {
-  id: number;
-  projectId: number;
-  name: string;
-  description: string | null;
-  createdAt: string;
-}
-
-interface Question {
-  id: number;
-  projectId: number;
-  datasetId: number;
-  prompt: string;
-  content: string;
-  generatedQuestion: string;
-  status: string;
-  createdAt: string;
-}
-
-interface Answer {
-  id: number;
-  questionId: number;
-  prompt: string;
-  generatedAnswer: string;
-  createdAt: string;
-}
+import { projectService, datasetService, questionService, answerService } from '../lib/data-service';
+import { Project, Dataset, Question, Answer } from '../types';
 
 interface QuestionWithAnswer extends Question {
   answer?: Answer;
@@ -62,55 +31,44 @@ export default function AnswersPage() {
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState({ current: 0, total: 0 });
 
-  // 获取项目列表
+  // 获取项目列表 - 使用模拟数据
   const fetchProjects = async () => {
     try {
-      const response = await fetch('/api/projects');
-      const result = await response.json();
-      if (result.success) {
-        setProjects(result.data);
-      }
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const projects = projectService.getAll();
+      setProjects(projects);
     } catch (error) {
       console.error('获取项目列表失败:', error);
     }
   };
 
-  // 获取数据集列表
+  // 获取数据集列表 - 使用模拟数据
   const fetchDatasets = async (projectId: string) => {
     try {
-      const response = await fetch(`/api/datasets?projectId=${projectId}`);
-      const result = await response.json();
-      if (result.success) {
-        setDatasets(result.data);
-      }
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const datasets = datasetService.getAll(parseInt(projectId));
+      setDatasets(datasets);
     } catch (error) {
       console.error('获取数据集列表失败:', error);
     }
   };
 
-  // 获取问题列表
+  // 获取问题列表 - 使用模拟数据
   const fetchQuestions = async (projectId?: string, datasetId?: string) => {
     try {
       setLoading(true);
-      let url = '/api/questions';
-      const params = new URLSearchParams();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      let questions = questionService.getAll();
       
       if (projectId) {
-        params.append('projectId', projectId);
+        questions = questions.filter(q => q.projectId === parseInt(projectId));
       }
       if (datasetId) {
-        params.append('datasetId', datasetId);
+        questions = questions.filter(q => q.datasetId === parseInt(datasetId));
       }
       
-      if (params.toString()) {
-        url += '?' + params.toString();
-      }
-      
-      const response = await fetch(url);
-      const result = await response.json();
-      if (result.success) {
-        setQuestions(result.data);
-      }
+      setQuestions(questions);
     } catch (error) {
       console.error('获取问题列表失败:', error);
     } finally {
@@ -118,14 +76,12 @@ export default function AnswersPage() {
     }
   };
 
-  // 获取答案列表
+  // 获取答案列表 - 使用模拟数据
   const fetchAnswers = async () => {
     try {
-      const response = await fetch('/api/answers');
-      const result = await response.json();
-      if (result.success) {
-        setAnswers(result.data);
-      }
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const answers = answerService.getAll();
+      setAnswers(answers);
     } catch (error) {
       console.error('获取答案列表失败:', error);
     }
@@ -172,7 +128,7 @@ export default function AnswersPage() {
     mergeQuestionsAndAnswers();
   }, [questions, answers]);
 
-  // 生成答案
+  // 生成答案 - 使用模拟生成器
   const handleGenerateAnswers = async () => {
     if (selectedQuestions.length === 0 || !prompt.trim()) {
       alert('请选择问题并输入提示词');
@@ -183,40 +139,49 @@ export default function AnswersPage() {
       setGenerating(true);
       setGeneratingProgress({ current: 0, total: selectedQuestions.length });
       
-      // 模拟进度更新
-      const progressInterval = setInterval(() => {
-        setGeneratingProgress(prev => {
-          if (prev.current < prev.total) {
-            return { ...prev, current: prev.current + 1 };
-          }
-          return prev;
-        });
-      }, 1000);
+      let successCount = 0;
       
-      const response = await fetch('/api/answers/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          questionIds: selectedQuestions,
-          prompt: prompt.trim(),
-        }),
-      });
-
-      const result = await response.json();
-      
-      clearInterval(progressInterval);
-      
-      if (result.success) {
-        setGeneratingProgress({ current: selectedQuestions.length, total: selectedQuestions.length });
-        alert(`成功生成 ${result.data.total} 个答案！`);
-        await fetchAnswers(); // 重新获取答案列表
-        await fetchQuestions(selectedProject, selectedDataset); // 重新获取问题列表
-        setSelectedQuestions([]); // 清空选择
-      } else {
-        alert('生成答案失败: ' + result.error);
+      for (let i = 0; i < selectedQuestions.length; i++) {
+        const questionId = selectedQuestions[i];
+        const question = questions.find(q => q.id === questionId);
+        
+        if (question) {
+          // 更新进度
+          setGeneratingProgress({ current: i + 1, total: selectedQuestions.length });
+          
+          // 模拟异步生成延迟
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1500));
+          
+          // 生成模拟答案
+          const mockAnswers = [
+            `根据问题"${question.generatedQuestion}"，我认为这个问题涉及到多个重要方面。首先，我们需要理解问题的核心概念和背景。其次，需要分析相关的理论基础和实践应用。最后，结合具体情况给出合理的解释和建议。`,
+            `对于"${question.generatedQuestion}"这个问题，可以从以下几个角度来分析：1）理论层面的解释；2）实际应用中的表现；3）可能存在的问题和解决方案。通过综合分析，我们可以得出较为全面的答案。`,
+            `这是一个很好的问题。"${question.generatedQuestion}"涉及到的知识点比较广泛，需要我们从多个维度来思考。基于相关理论和实践经验，我认为关键在于理解其本质特征和运作机制。`,
+            `针对"${question.generatedQuestion}"，我的理解是这样的：首先需要明确问题的定义和范围，然后分析其重要性和影响因素，最后提出相应的观点和建议。这样可以确保答案的完整性和准确性。`,
+            `关于"${question.generatedQuestion}"这个问题，我认为需要从系统性的角度来回答。通过分析问题的各个组成部分及其相互关系，我们可以更好地理解问题的本质，并给出有价值的见解。`
+          ];
+          
+          const generatedAnswer = mockAnswers[Math.floor(Math.random() * mockAnswers.length)];
+          const processedPrompt = prompt.replace('{question}', question.generatedQuestion);
+          
+          // 创建新答案
+          answerService.create({
+            questionId: questionId,
+            prompt: processedPrompt,
+            generatedAnswer: generatedAnswer
+          });
+          
+          successCount++;
+        }
       }
+      
+      setGeneratingProgress({ current: selectedQuestions.length, total: selectedQuestions.length });
+      alert(`成功生成 ${successCount} 个答案！`);
+      
+      await fetchAnswers(); // 重新获取答案列表
+      await fetchQuestions(selectedProject, selectedDataset); // 重新获取问题列表
+      setSelectedQuestions([]); // 清空选择
+      
     } catch (error) {
       console.error('生成答案失败:', error);
       alert('生成答案失败');
@@ -226,21 +191,20 @@ export default function AnswersPage() {
     }
   };
 
-  // 删除答案
+  // 删除答案 - 使用模拟数据
   const handleDeleteAnswer = async (answerId: number) => {
     if (!confirm('确定要删除这个答案吗？')) return;
 
     try {
-      const response = await fetch(`/api/answers/${answerId}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (result.success) {
+      const success = answerService.delete(answerId);
+      
+      if (success) {
         await fetchAnswers(); // 重新获取答案列表
+        alert('答案删除成功');
       } else {
-        alert('删除失败: ' + result.error);
+        alert('删除失败: 答案不存在');
       }
     } catch (error) {
       console.error('删除答案失败:', error);

@@ -5,37 +5,36 @@ import { useRouter } from 'next/navigation';
 import { FiPlus, FiEdit, FiTrash2 } from 'react-icons/fi';
 import ProjectFormModal from '@/components/projects/project-form-modal';
 import ConfirmModal from '@/components/common/confirm-modal';
+import { projectService, datasetService } from '../lib/data-service';
+import { Project } from '../types';
 
-interface Project {
-  id: number;
-  name: string;
-  description: string | null;
-  createdAt: string;
+interface ProjectWithDatasetCount extends Project {
   datasetCount: number;
 }
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectWithDatasetCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectWithDatasetCount | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 获取项目列表
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/projects');
-      const result = await response.json();
+      const projectsData = projectService.getAll();
       
-      if (result.success) {
-        setProjects(result.data);
-      } else {
-        console.error('获取项目列表失败:', result.error);
-      }
+      // 为每个项目计算数据集数量
+      const projectsWithCount = projectsData.map(project => ({
+        ...project,
+        datasetCount: datasetService.getAll(project.id).length
+      }));
+      
+      setProjects(projectsWithCount);
     } catch (error) {
       console.error('获取项目列表失败:', error);
     } finally {
@@ -51,22 +50,15 @@ export default function ProjectsPage() {
   const handleCreateProject = async (data: { name: string; description: string }) => {
     try {
       setIsSubmitting(true);
-      const response = await fetch('/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
       
-      if (result.success) {
+      const newProject = projectService.create({
+        name: data.name,
+        description: data.description || undefined
+      });
+      
+      if (newProject) {
         setIsCreateModalOpen(false);
         fetchProjects(); // 重新获取项目列表
-      } else {
-        console.error('创建项目失败:', result.error);
-        alert('创建项目失败: ' + result.error);
       }
     } catch (error) {
       console.error('创建项目失败:', error);
@@ -82,23 +74,16 @@ export default function ProjectsPage() {
 
     try {
       setIsSubmitting(true);
-      const response = await fetch(`/api/projects/${selectedProject.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
       
-      if (result.success) {
+      const updatedProject = projectService.update(selectedProject.id, {
+        name: data.name,
+        description: data.description || undefined
+      });
+      
+      if (updatedProject) {
         setIsEditModalOpen(false);
         setSelectedProject(null);
         fetchProjects(); // 重新获取项目列表
-      } else {
-        console.error('更新项目失败:', result.error);
-        alert('更新项目失败: ' + result.error);
       }
     } catch (error) {
       console.error('更新项目失败:', error);
@@ -114,19 +99,13 @@ export default function ProjectsPage() {
 
     try {
       setIsSubmitting(true);
-      const response = await fetch(`/api/projects/${selectedProject.id}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
       
-      if (result.success) {
+      const success = projectService.delete(selectedProject.id);
+      
+      if (success) {
         setIsDeleteModalOpen(false);
         setSelectedProject(null);
         fetchProjects(); // 重新获取项目列表
-      } else {
-        console.error('删除项目失败:', result.error);
-        alert('删除项目失败: ' + result.error);
       }
     } catch (error) {
       console.error('删除项目失败:', error);
@@ -137,13 +116,13 @@ export default function ProjectsPage() {
   };
 
   // 打开编辑模态框
-  const openEditModal = (project: Project) => {
+  const openEditModal = (project: ProjectWithDatasetCount) => {
     setSelectedProject(project);
     setIsEditModalOpen(true);
   };
 
   // 打开删除确认模态框
-  const openDeleteModal = (project: Project) => {
+  const openDeleteModal = (project: ProjectWithDatasetCount) => {
     setSelectedProject(project);
     setIsDeleteModalOpen(true);
   };

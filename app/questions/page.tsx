@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { FiPlay, FiSettings, FiDownload, FiEdit, FiTrash2, FiCpu, FiPause, FiClock, FiCheckCircle, FiXCircle, FiRefreshCw, FiInfo, FiAlertTriangle, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiPlay, FiSettings, FiDownload, FiCpu, FiCheckCircle, FiXCircle, FiRefreshCw, FiInfo, FiAlertTriangle, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import {
   Select,
   SelectContent,
@@ -17,7 +17,6 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -25,39 +24,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import PromptSettingsModal from '@/components/questions/prompt-settings-modal';
-import { ErrorBoundary } from '@/components/common/error-boundary';
-import { FeedbackProvider, useFeedback, useErrorHandler, useAsyncOperation } from '@/components/common/feedback-system';
-
-interface Project {
-  id: number;
-  name: string;
-  description: string | null;
-}
-
-interface Dataset {
-  id: number;
-  projectId: number;
-  name: string;
-  fileName: string;
-}
-
-interface Question {
-  id: number;
-  projectId: number;
-  datasetId: number;
-  prompt: string;
-  content: string;
-  generatedQuestion: string;
-  status: string;
-  createdAt: string;
-}
-
-interface Segment {
-  id: number;
-  content: string;
-  segmentId?: string;
-}
+import { projectService, datasetService, questionService, templateService } from '../lib/data-service';
+import { Project, Dataset, Question, Segment } from '../types';
 
 interface AIConfig {
   platform: string;
@@ -87,7 +55,6 @@ interface GenerationSummary {
   total: number;
   successful: number;
   failed: number;
-  retried?: number;
   questions: Array<{
     id: number;
     content: string;
@@ -103,11 +70,7 @@ interface SystemStatus {
   message: string;
 }
 
-function QuestionsPageContent() {
-  const feedback = useFeedback();
-  const { handleError, handleSuccess, handleWarning } = useErrorHandler();
-  const { executeWithFeedback } = useAsyncOperation();
-  
+export default function QuestionsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -143,11 +106,6 @@ function QuestionsPageContent() {
   });
   const [generationResults, setGenerationResults] = useState<GenerationResult[]>([]);
   const [generationSummary, setGenerationSummary] = useState<GenerationSummary | null>(null);
-  
-  // 生成结果详情状态
-  const [generationHistory, setGenerationHistory] = useState<any[]>([]);
-  const [generationStats, setGenerationStats] = useState<any>(null);
-  const [historyLoading, setHistoryLoading] = useState(false);
   
   // 问题详情对话框状态
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -189,91 +147,72 @@ function QuestionsPageContent() {
     message: '正在检查系统状态...'
   });
 
-  // 获取AI配置
+  // 获取AI配置 - 使用模拟配置
   const fetchAIConfig = async () => {
     try {
-      const response = await fetch('/api/settings?type=ai');
-      const result = await response.json();
-      console.log('获取AI配置结果:', result);
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      if (result.success && result.data) {
-        setAiConfig(result.data);
-        
-        // 优先从本地存储恢复模型选择，其次使用配置中的模型，最后不选择任何模型
-        const savedModel = localStorage.getItem('selectedModel');
-        const modelToUse = savedModel || result.data.model || '';
-        setSelectedModel(modelToUse);
-        
-        // 如果有配置，自动获取模型列表
-        // 本地模型不需要API密钥
-        const isLocalModel = result.data.apiUrl && (
-          result.data.apiUrl.includes('localhost') || 
-          result.data.apiUrl.includes('127.0.0.1') ||
-          result.data.apiUrl.includes('0.0.0.0') ||
-          result.data.platform === 'local' ||
-          result.data.platform === 'ollama'
-        );
-        
-        if (result.data.platform && result.data.apiUrl && (isLocalModel || result.data.apiKey)) {
-          await fetchModels(result.data);
-        }
-      } else {
-        console.log('AI配置获取失败或数据为空:', result);
-        // 设置默认的空配置
-        setAiConfig({ platform: '', apiUrl: '', apiKey: '', model: '' });
-      }
+      const savedConfig = localStorage.getItem('aiConfig');
+      const defaultConfig = {
+        platform: 'mock',
+        apiUrl: 'http://localhost:11434',
+        apiKey: '',
+        model: 'mock-model'
+      };
+      
+      const config = savedConfig ? JSON.parse(savedConfig) : defaultConfig;
+      setAiConfig(config);
+      
+      const savedModel = localStorage.getItem('selectedModel') || config.model || 'mock-model';
+      setSelectedModel(savedModel);
+      
+      await fetchModels(config);
     } catch (error) {
       console.error('获取AI配置失败:', error);
-      // 设置默认的空配置
-      setAiConfig({ platform: '', apiUrl: '', apiKey: '', model: '' });
+      setAiConfig({ platform: 'mock', apiUrl: '', apiKey: '', model: 'mock-model' });
     }
   };
 
-  // 获取保存的提示词设置
+  // 获取保存的提示词设置 - 使用模拟数据
   const fetchPromptSettings = async () => {
     try {
-      const response = await fetch('/api/prompt-templates?type=current&category=question');
-      const result = await response.json();
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      if (result.success && result.data.template) {
-        setPrompt(result.data.template);
+      const templates = templateService.getPromptTemplates('question');
+      const defaultTemplate = templates.find(t => t.isDefault);
+      if (defaultTemplate) {
+        setPrompt(defaultTemplate.template);
       }
     } catch (error) {
       console.error('获取提示词设置失败:', error);
     }
   };
 
-  // 获取模型列表
+  // 获取模型列表 - 使用模拟数据
   const fetchModels = async (config?: AIConfig) => {
     const configToUse = config || aiConfig;
-    if (!configToUse.platform || !configToUse.apiUrl) {
+    if (!configToUse.platform) {
       return;
     }
 
     try {
       setModelsLoading(true);
-      const response = await fetch('/api/models/list', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          platform: configToUse.platform,
-          apiUrl: configToUse.apiUrl,
-          apiKey: configToUse.apiKey,
-        }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setAvailableModels(result.models);
-        // 不自动选择默认模型，只有当前选中的模型不在列表中时才清空选择
-        if (selectedModel && !result.models.includes(selectedModel)) {
-          setSelectedModel('');
-        }
-      } else {
-        console.error('获取模型列表失败:', result.error);
-        setAvailableModels([]);
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const mockModels = [
+        'mock-model',
+        'gpt-3.5-turbo',
+        'gpt-4',
+        'claude-3-haiku',
+        'llama2:7b',
+        'qwen:7b'
+      ];
+      
+      setAvailableModels(mockModels);
+      
+      if (selectedModel && !mockModels.includes(selectedModel)) {
+        setSelectedModel('');
       }
     } catch (error) {
       console.error('获取模型列表失败:', error);
@@ -283,52 +222,34 @@ function QuestionsPageContent() {
     }
   };
 
-  // 处理模型切换并保存
+  // 处理模型切换并保存 - 使用本地存储
   const handleModelChange = async (model: string) => {
     setSelectedModel(model);
     
-    // 保存选择的模型到本地存储
     try {
       localStorage.setItem('selectedModel', model);
       
-      // 同时更新AI配置中的模型设置
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'ai',
-          config: {
-            ...aiConfig,
-            model: model,
-          },
-        }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setAiConfig(prev => ({ ...prev, model }));
-      }
+      const updatedConfig = { ...aiConfig, model };
+      localStorage.setItem('aiConfig', JSON.stringify(updatedConfig));
+      setAiConfig(updatedConfig);
     } catch (error) {
       console.error('保存模型选择失败:', error);
     }
   };
 
-  // 获取项目列表
+  // 获取项目列表 - 使用模拟数据
   const fetchProjects = async () => {
     try {
-      const response = await fetch('/api/projects');
-      const result = await response.json();
-      if (result.success) {
-        setProjects(result.data);
-      }
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const projects = projectService.getAll();
+      setProjects(projects);
     } catch (error) {
       console.error('获取项目列表失败:', error);
     }
   };
 
-  // 获取数据集列表
+  // 获取数据集列表 - 使用模拟数据
   const fetchDatasets = async (projectId: string) => {
     if (!projectId) {
       setDatasets([]);
@@ -338,17 +259,16 @@ function QuestionsPageContent() {
     }
 
     try {
-      const response = await fetch(`/api/datasets?projectId=${projectId}`);
-      const result = await response.json();
-      if (result.success) {
-        setDatasets(result.data);
-      }
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      const datasets = datasetService.getAll(parseInt(projectId));
+      setDatasets(datasets);
     } catch (error) {
       console.error('获取数据集列表失败:', error);
     }
   };
 
-  // 获取数据集分段
+  // 获取数据集分段 - 使用模拟数据
   const fetchSegments = async (datasetId: string) => {
     if (!datasetId) {
       setSegments([]);
@@ -358,10 +278,22 @@ function QuestionsPageContent() {
 
     try {
       setSegmentsLoading(true);
-      const response = await fetch(`/api/datasets/${datasetId}/segments?limit=50`);
-      const result = await response.json();
-      if (result.success) {
-        setSegments(result.data.segments);
+      
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      const dataset = datasetService.getById(parseInt(datasetId));
+      if (dataset && dataset.content) {
+        const delimiter = dataset.segmentDelimiter || '\n\n';
+        const segments = dataset.content.split(delimiter)
+          .filter(segment => segment.trim().length > 0)
+          .slice(0, 50)
+          .map((content, index) => ({
+            id: index,
+            content: content.trim(),
+            segmentId: `segment-${index + 1}`
+          }));
+        
+        setSegments(segments);
         setShowSegments(true);
       }
     } catch (error) {
@@ -371,45 +303,28 @@ function QuestionsPageContent() {
     }
   };
 
-  // 获取问题列表
+  // 获取问题列表 - 使用模拟数据
   const fetchQuestions = async (projectId?: string, page: number = 1, datasetId?: string) => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
       
-      if (projectId) {
-        params.append('projectId', projectId);
-      } else {
-        params.append('projectId', '1'); // 默认获取第一个项目的问题
-      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const targetProjectId = projectId ? parseInt(projectId) : 1;
+      let questions = questionService.getAll(targetProjectId);
       
       if (datasetId && datasetId !== 'all') {
-        params.append('datasetId', datasetId);
+        questions = questions.filter((q: Question) => q.datasetId === parseInt(datasetId));
       }
       
-      params.append('page', page.toString());
-      params.append('limit', pageSize.toString());
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedQuestions = questions.slice(startIndex, endIndex);
       
-      const response = await fetch(`/api/questions?${params}`);
-      const result = await response.json();
-      
-      if (result.success) {
-        setQuestions(result.data.questions || result.data);
-        setTotalQuestions(result.data.total || result.data.length);
-        setTotalPages(Math.ceil((result.data.total || result.data.length) / pageSize));
-        setCurrentPage(page);
-        
-        // 更新结果区域的数据集筛选器选项
-        if (result.data.datasets && Array.isArray(result.data.datasets)) {
-        // 如果API返回了相关的数据集列表，更新数据集筛选选项
-        const availableDatasets = result.data.datasets.map((ds: {id: number, name: string}) => ({
-          id: ds.id.toString(),
-          name: ds.name
-        }));
-          // 这里可以设置一个状态来存储可用的数据集筛选选项
-          // setAvailableDatasetFilters(availableDatasets);
-        }
-      }
+      setQuestions(paginatedQuestions);
+      setTotalQuestions(questions.length);
+      setTotalPages(Math.ceil(questions.length / pageSize));
+      setCurrentPage(page);
     } catch (error) {
       console.error('获取问题列表失败:', error);
     } finally {
@@ -417,41 +332,23 @@ function QuestionsPageContent() {
     }
   };
 
-  // 获取生成结果历史
-  const fetchGenerationHistory = async (projectId?: string, datasetId?: string) => {
-    try {
-      setHistoryLoading(true);
-      const params = new URLSearchParams();
-      if (projectId) params.append('projectId', projectId);
-      if (datasetId) params.append('datasetId', datasetId);
-      params.append('limit', '20');
-      
-      const response = await fetch(`/api/questions/generation-results?${params}`);
-      const result = await response.json();
-      
-      if (result.success) {
-        setGenerationHistory(result.data.results);
-        setGenerationStats(result.data.statistics);
-      }
-    } catch (error) {
-      console.error('获取生成历史失败:', error);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  // 获取单个问题详情
+  // 获取单个问题详情 - 使用模拟数据
   const fetchQuestionDetail = async (questionId: number) => {
     try {
-      const response = await fetch('/api/questions/generation-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId }),
-      });
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      const result = await response.json();
-      if (result.success) {
-        return result.data;
+      const question = questionService.getById(questionId);
+      if (question) {
+        return {
+          question: question,
+          metadata: {
+            contentLength: question.content.length,
+            questionLength: question.generatedQuestion.length,
+            promptLength: question.prompt.length,
+            createdAt: question.createdAt,
+            updatedAt: question.createdAt
+          }
+        };
       }
     } catch (error) {
       console.error('获取问题详情失败:', error);
@@ -462,8 +359,6 @@ function QuestionsPageContent() {
   // 检查系统状态
   const checkSystemStatus = useCallback(async () => {
     try {
-      // 支持本地模型的AI配置检查
-      // 本地模型只需要 platform 和 apiUrl，不需要 apiKey
       const isLocalModel = aiConfig.apiUrl && (
         aiConfig.apiUrl.includes('localhost') || 
         aiConfig.apiUrl.includes('127.0.0.1') ||
@@ -476,30 +371,12 @@ function QuestionsPageContent() {
       const hasProj = projects.length > 0;
       const hasData = datasets.length > 0;
       
-      console.log('AI配置检查:', {
-        apiUrl: aiConfig.apiUrl,
-        apiKey: aiConfig.apiKey ? '已配置' : '未配置',
-        platform: aiConfig.platform,
-        model: aiConfig.model,
-        isLocalModel,
-        hasAI
-      });
-      
       let statusMessage = '';
       if (!hasAI) {
-        if (!aiConfig.platform) {
-          statusMessage = '⚠️ 未配置AI平台，将使用演示模式生成问题';
-        } else if (!aiConfig.apiUrl) {
-          statusMessage = '⚠️ 未配置API地址，将使用演示模式生成问题';
-        } else if (!isLocalModel && !aiConfig.apiKey) {
-          statusMessage = '⚠️ 云端模型需要配置API密钥，将使用演示模式生成问题';
-        } else {
-          statusMessage = '⚠️ AI配置不完整，将使用演示模式生成问题';
-        }
+        statusMessage = '⚠️ 未配置AI平台，将使用演示模式生成问题';
       } else if (!hasProj) {
         statusMessage = '📁 请先创建项目';
       } else if (!hasData) {
-        // 检查是否已选择项目但未选择数据集
         if (selectedProject && datasets.length > 0) {
           statusMessage = '📄 请选择数据集';
         } else if (selectedProject && datasets.length === 0) {
@@ -540,28 +417,24 @@ function QuestionsPageContent() {
     fetchPromptSettings();
   }, []);
 
-  // 当配置变化时检查系统状态
   useEffect(() => {
     checkSystemStatus();
   }, [checkSystemStatus]);
 
   useEffect(() => {
     if (selectedProject) {
-      resetSelections(); // 重置数据集和分段选择
+      resetSelections();
       fetchDatasets(selectedProject);
-      // 移除自动获取问题列表，只在用户主动查看结果时获取
-      setCurrentPage(1); // 重置页码
+      setCurrentPage(1);
     }
   }, [selectedProject]);
 
   useEffect(() => {
     if (selectedDataset) {
       fetchSegments(selectedDataset);
-      // 移除自动获取生成历史，只在需要时手动获取
     }
   }, [selectedDataset]);
 
-  // 当数据集筛选器变化时，自动获取对应的问题列表
   useEffect(() => {
     if (selectedProject && resultDatasetFilter) {
       fetchQuestions(selectedProject, 1, resultDatasetFilter);
@@ -574,7 +447,6 @@ function QuestionsPageContent() {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    // 基础验证
     if (selectedSegments.length === 0) {
       errors.push('请至少选择一个段落');
     }
@@ -591,7 +463,6 @@ function QuestionsPageContent() {
       errors.push('请选择数据集');
     }
 
-    // 警告检查
     if (selectedSegments.length > 50) {
       warnings.push(`选择了 ${selectedSegments.length} 个段落，生成时间可能较长`);
     }
@@ -606,9 +477,8 @@ function QuestionsPageContent() {
 
     setValidationErrors(errors);
     setValidationWarnings(warnings);
-  }, [selectedSegments, prompt, selectedProject, selectedDataset, concurrencyLimit, segments]);
+  }, [selectedSegments, prompt, selectedProject, selectedDataset, concurrencyLimit]);
 
-  // 配置变化时验证
   useEffect(() => {
     validateConfig();
   }, [validateConfig]);
@@ -664,30 +534,23 @@ function QuestionsPageContent() {
     }
   };
 
-  // 生成问题 - 使用并发控制
+  // 生成问题 - 使用模拟生成器
   const handleGenerateQuestions = async () => {
-    // 基础验证
     if (!selectedProject || !selectedDataset || !prompt.trim()) {
-      handleError('请选择项目、数据集并输入提示词', '配置不完整');
+      alert('请选择项目、数据集并输入提示词');
       return;
     }
 
     if (selectedSegments.length === 0) {
-      handleError('请至少选择一个分段', '未选择分段');
+      alert('请至少选择一个分段');
       return;
-    }
-
-    // 如果没有选择模型，给出友好提示但不阻止生成（使用模拟生成器）
-    if (!selectedModel) {
-      handleWarning('未配置AI模型，将使用模拟生成器进行演示', '使用演示模式');
     }
 
     if (validationErrors.length > 0) {
-      handleError('请先解决配置错误', '配置验证失败');
+      alert('请先解决配置错误');
       return;
     }
 
-    // 获取选中的分段内容，并为每个分段替换提示词中的{content}
     const selectedSegmentContents = selectedSegments.map(index => {
       if (index >= 0 && index < segments.length) {
         const content = segments[index].content;
@@ -706,17 +569,9 @@ function QuestionsPageContent() {
     );
 
     if (selectedSegmentContents.length === 0) {
-      handleError('选中的分段内容为空', '分段内容错误');
+      alert('选中的分段内容为空');
       return;
     }
-
-    // 为每个分段生成替换了内容的提示词
-    const segmentsWithPrompts = selectedSegmentContents.map(item => ({
-      content: item.content,
-      prompt: prompt.trim().replace('{content}', item.content),
-      segmentId: item.segmentId,
-      index: item.index
-    }));
     
     try {
       setGenerating(true);
@@ -730,148 +585,131 @@ function QuestionsPageContent() {
       setGenerationResults([]);
       setGenerationSummary(null);
 
-      // 使用 Server-Sent Events 实现实时进度更新
-      const response = await fetch('/api/questions/generate-stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: parseInt(selectedProject),
-          datasetId: parseInt(selectedDataset),
-          prompt: prompt.trim(),
-          segments: segmentsWithPrompts, // 发送包含替换后提示词的数据
-          model: selectedModel || 'mock', // 如果没有模型，使用mock标识
-          concurrencyLimit: concurrencyLimit[0],
-          enableRetry,
-          maxRetries: maxRetries[0],
-          datasetName: datasets.find(d => d.id.toString() === selectedDataset)?.name || '未命名数据集'
-        }),
+      const results: GenerationResult[] = [];
+      let successful = 0;
+      let failed = 0;
+
+      for (let i = 0; i < selectedSegmentContents.length; i++) {
+        const segment = selectedSegmentContents[i];
+        
+        setProgress({
+          total: selectedSegmentContents.length,
+          completed: i,
+          failed: failed,
+          current: `正在生成第 ${i + 1} 个问题...`,
+          percentage: Math.round((i / selectedSegmentContents.length) * 100)
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+
+        const isSuccess = Math.random() > 0.1;
+        
+        if (isSuccess) {
+          const mockQuestions = [
+            `关于"${segment.content.substring(0, 20)}..."的核心观点是什么？`,
+            `请解释"${segment.content.substring(0, 15)}..."中提到的主要概念。`,
+            `根据内容分析，${segment.content.substring(0, 10)}...的重要性体现在哪里？`,
+            `如何理解文中关于"${segment.content.substring(0, 12)}..."的描述？`,
+            `请总结"${segment.content.substring(0, 18)}..."的关键要点。`
+          ];
+          
+          const generatedQuestion = mockQuestions[Math.floor(Math.random() * mockQuestions.length)];
+          
+          const newQuestion = questionService.create({
+            projectId: parseInt(selectedProject),
+            datasetId: parseInt(selectedDataset),
+            prompt: segment.prompt,
+            content: segment.content,
+            generatedQuestion: generatedQuestion,
+            wordCount: generatedQuestion.length,
+            status: 'generated'
+          });
+
+          results.push({
+            success: true,
+            questionId: newQuestion.id,
+            question: generatedQuestion,
+            segmentIndex: segment.index,
+            content: segment.content
+          });
+          
+          successful++;
+        } else {
+          results.push({
+            success: false,
+            error: '模拟生成失败',
+            segmentIndex: segment.index,
+            content: segment.content
+          });
+          
+          failed++;
+        }
+      }
+
+      const summary: GenerationSummary = {
+        total: selectedSegmentContents.length,
+        successful,
+        failed,
+        questions: results.filter(r => r.success).map(r => ({
+          id: r.questionId!,
+          content: r.content,
+          generatedQuestion: r.question!,
+          segmentIndex: r.segmentIndex
+        }))
+      };
+
+      setGenerationResults(results);
+      setGenerationSummary(summary);
+      setProgress({
+        total: selectedSegmentContents.length,
+        completed: successful,
+        failed: failed,
+        current: '🎉 生成完成！',
+        percentage: 100
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('生成请求失败:', errorText);
-        
-        // 提供更友好的错误信息
-        let friendlyError = '生成问题时发生错误';
-        if (response.status === 500) {
-          friendlyError = '服务器内部错误，请检查AI配置或稍后重试';
-        } else if (response.status === 400) {
-          friendlyError = '请求参数有误，请检查配置';
-        }
-        
-        throw new Error(friendlyError);
-      }
-
-      // 处理流式响应
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error('无法读取响应流');
-      }
-
-      let buffer = '';
+      setResultDatasetFilter(selectedDataset);
       
-      while (true) {
-        const { done, value } = await reader.read();
-        
-        if (done) break;
-        
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              
-              if (data.type === 'progress') {
-                // 实时更新进度
-                setProgress(data.data);
-              } else if (data.type === 'complete') {
-                // 生成完成
-                setGenerationResults(data.data.results || []);
-                setGenerationSummary(data.data.summary);
-                setProgress({
-                  total: data.data.summary.total,
-                  completed: data.data.summary.successful,
-                  failed: data.data.summary.failed,
-                  current: '🎉 生成完成！',
-                  percentage: 100
-                });
+      await fetchQuestions(selectedProject, 1, selectedDataset);
+      
+      setSelectedSegments([]);
 
-                // 自动切换到当前数据集的筛选视图
-                setResultDatasetFilter(selectedDataset);
-                
-                // 刷新问题列表和生成历史
-                await fetchQuestions(selectedProject, 1, selectedDataset);
-                await fetchGenerationHistory(selectedProject, selectedDataset);
-                
-                // 清空选中的分段
-                setSelectedSegments([]);
-
-                // 根据实际结果显示成功或警告消息
-                const { successful, failed } = data.data.summary;
-                const datasetName = datasets.find(d => d.id.toString() === selectedDataset)?.name || '当前数据集';
-                
-                if (failed === 0) {
-                  handleSuccess(`成功为"${datasetName}"生成了 ${successful} 个问题`, '生成完成');
-                } else if (successful > 0) {
-                  handleWarning(`为"${datasetName}"生成完成：成功 ${successful} 个，失败 ${failed} 个`, '部分生成成功');
-                } else {
-                  handleError(`为"${datasetName}"生成问题全部失败`, '生成失败');
-                }
-                
-                break;
-              } else if (data.type === 'error') {
-                // 处理错误
-                let errorMsg = data.error || '生成失败';
-                
-                if (errorMsg.includes('AI配置不完整')) {
-                  errorMsg = '请先在系统设置中配置AI模型，或者当前正在使用演示模式生成问题';
-                  handleWarning(errorMsg, '配置提示');
-                } else {
-                  handleError(errorMsg, '生成问题失败');
-                }
-                break;
-              }
-            } catch (parseError) {
-              console.error('解析SSE数据失败:', parseError);
-            }
-          }
-        }
+      const datasetName = datasets.find(d => d.id.toString() === selectedDataset)?.name || '当前数据集';
+      
+      if (failed === 0) {
+        alert(`成功为"${datasetName}"生成了 ${successful} 个问题`);
+      } else if (successful > 0) {
+        alert(`为"${datasetName}"生成完成：成功 ${successful} 个，失败 ${failed} 个`);
+      } else {
+        alert(`为"${datasetName}"生成问题全部失败`);
       }
 
     } catch (error) {
       console.error('生成问题失败:', error);
-      handleError(error instanceof Error ? error.message : '生成问题时发生未知错误', '生成失败');
+      alert('生成问题时发生未知错误');
     } finally {
       setGenerating(false);
     }
   };
 
-  // 删除问题
+  // 删除问题 - 使用模拟数据
   const handleDeleteQuestion = async (questionId: number) => {
     if (!confirm('确定要删除这个问题吗？')) return;
 
     try {
-      const response = await fetch(`/api/questions/${questionId}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (result.success) {
-        await fetchQuestions(selectedProject, currentPage, resultDatasetFilter); // 重新获取问题列表
-        await fetchGenerationHistory(selectedProject, selectedDataset); // 刷新生成历史
-        handleSuccess('问题删除成功', '删除完成');
+      const success = questionService.delete(questionId);
+      
+      if (success) {
+        await fetchQuestions(selectedProject, currentPage, resultDatasetFilter);
+        alert('问题删除成功');
       } else {
-        handleError('删除失败: ' + result.error, '删除失败');
+        alert('删除失败: 问题不存在');
       }
     } catch (error) {
       console.error('删除问题失败:', error);
-      handleError('删除问题失败', '删除失败');
+      alert('删除问题失败');
     }
   };
 
@@ -880,10 +718,8 @@ function QuestionsPageContent() {
     try {
       const detail = await fetchQuestionDetail(questionId);
       if (detail) {
-        // 获取数据集名称
         const datasetName = getDatasetName(detail.question.datasetId);
         
-        // 设置当前问题详情
         setCurrentQuestionDetail({
           question: detail.question.generatedQuestion,
           content: detail.question.content,
@@ -898,12 +734,11 @@ function QuestionsPageContent() {
           datasetName
         });
         
-        // 打开详情对话框
         setDetailDialogOpen(true);
       }
     } catch (error) {
       console.error('获取问题详情失败:', error);
-      handleError('获取问题详情失败', '详情获取失败');
+      alert('获取问题详情失败');
     }
   };
 
@@ -925,7 +760,6 @@ function QuestionsPageContent() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">问题生成</h1>
           <p className="text-gray-600 mt-1">从数据集片段生成训练问题</p>
-          {/* 系统状态提示 */}
           <div className="mt-2">
             <span className={`text-sm px-3 py-1 rounded-full ${
               systemStatus.aiConfigured 
@@ -937,7 +771,6 @@ function QuestionsPageContent() {
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          {/* 模型选择器 */}
           <div className="flex items-center space-x-2">
             <FiCpu className="h-4 w-4 text-gray-500" />
             <Select 
@@ -964,11 +797,6 @@ function QuestionsPageContent() {
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
             )}
           </div>
-          
-          <PromptSettingsModal 
-            prompt={prompt}
-            onPromptChange={setPrompt}
-          />
         </div>
       </div>
 
@@ -1069,7 +897,6 @@ function QuestionsPageContent() {
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    {/* 分段头部 - 可点击选中checkbox */}
                     <div 
                       className="p-3 cursor-pointer"
                       onClick={() => handleSegmentSelect(index)}
@@ -1145,7 +972,6 @@ function QuestionsPageContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* 基础信息 */}
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600">
                   已选择 {selectedSegments.length} 个分段，当前模型: {selectedModel || '未选择'}
@@ -1161,12 +987,10 @@ function QuestionsPageContent() {
                 </Button>
               </div>
 
-              {/* 当前设置摘要 */}
               <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
                 并发数: {concurrencyLimit[0]} | 重试: {enableRetry ? `启用(${maxRetries[0]}次)` : '禁用'}
               </div>
 
-              {/* 验证信息 */}
               {(validationErrors.length > 0 || validationWarnings.length > 0) && (
                 <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
                   {validationErrors.map((error, index) => (
@@ -1184,7 +1008,6 @@ function QuestionsPageContent() {
                 </div>
               )}
 
-              {/* 生成按钮 */}
               <Button
                 onClick={handleGenerateQuestions}
                 disabled={generating || validationErrors.length > 0 || !selectedProject || !selectedDataset || selectedSegments.length === 0}
@@ -1204,7 +1027,6 @@ function QuestionsPageContent() {
                 )}
               </Button>
 
-              {/* 生成进度 */}
               {generating && (
                 <div className="space-y-3 p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center justify-between text-sm">
@@ -1228,7 +1050,6 @@ function QuestionsPageContent() {
                 </div>
               )}
 
-              {/* 生成结果摘要 */}
               {generationSummary && (
                 <div className="space-y-3 p-3 bg-green-50 rounded-lg">
                   <div className="font-medium text-green-800">生成完成</div>
@@ -1243,13 +1064,6 @@ function QuestionsPageContent() {
                     </div>
                   </div>
                   
-                  {generationSummary.retried && (
-                    <div className="flex items-center text-sm">
-                      <FiRefreshCw className="mr-1 h-4 w-4 text-blue-500" />
-                      重试: {generationSummary.retried}
-                    </div>
-                  )}
-
                   <div className="text-sm text-gray-600">
                     总计生成 {generationSummary.questions.length} 个问题
                   </div>
@@ -1260,18 +1074,15 @@ function QuestionsPageContent() {
 
           {/* 生成结果 */}
           <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
-            {/* 上方：数据集筛选 */}
             <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h3 className="text-lg font-semibold text-gray-900">生成结果</h3>
               <div className="flex items-center space-x-4">
-                {/* 数据集筛选 */}
                 <div className="flex items-center space-x-2">
                   <label className="text-sm text-gray-600">筛选数据集:</label>
                   <Select 
                     value={resultDatasetFilter} 
                     onValueChange={(value) => {
                       setResultDatasetFilter(value);
-                      // 当筛选器变化时，立即获取对应数据集的问题
                       if (selectedProject) {
                         fetchQuestions(selectedProject, 1, value);
                         setCurrentPage(1);
@@ -1306,23 +1117,6 @@ function QuestionsPageContent() {
                   </Button>
                 </div>
                 
-                {/* 统计信息 */}
-                {generationStats && (
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <span className="flex items-center">
-                      <FiCheckCircle className="mr-1 h-3 w-3 text-green-500" />
-                      总计: {generationStats.total}
-                    </span>
-                    {generationStats.recent > 0 && (
-                      <span className="flex items-center">
-                        <FiClock className="mr-1 h-3 w-3 text-blue-500" />
-                        最近7天: {generationStats.recent}
-                      </span>
-                    )}
-                  </div>
-                )}
-                
-                {/* 导出数据按钮 */}
                 <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                   <FiDownload className="mr-2 h-4 w-4" />
                   导出数据
@@ -1330,7 +1124,6 @@ function QuestionsPageContent() {
               </div>
             </div>
             
-            {/* 下方：问题列表 */}
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -1349,19 +1142,19 @@ function QuestionsPageContent() {
                         key={question.id}
                         className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
                       >
-                      <div className="mb-2">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="text-sm text-gray-500">
-                            {getProjectName(question.projectId)} / {getDatasetName(question.datasetId)}
+                        <div className="mb-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="text-sm text-gray-500">
+                              {getProjectName(question.projectId)} / {getDatasetName(question.datasetId)}
+                            </div>
+                            <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                              数据集: {getDatasetName(question.datasetId)}
+                            </div>
                           </div>
-                          <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                            数据集: {getDatasetName(question.datasetId)}
+                          <div className="font-medium text-gray-900">
+                            {question.generatedQuestion}
                           </div>
                         </div>
-                        <div className="font-medium text-gray-900">
-                          {question.generatedQuestion}
-                        </div>
-                      </div>
                         <div className="flex justify-between items-center">
                           <div className="text-xs text-gray-400">
                             生成时间: {new Date(question.createdAt).toLocaleString('zh-CN')}
@@ -1381,7 +1174,6 @@ function QuestionsPageContent() {
                   )}
                 </div>
 
-                {/* 分页控件 */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 flex-shrink-0">
                     <div className="text-sm text-gray-600">
@@ -1398,7 +1190,6 @@ function QuestionsPageContent() {
                         上一页
                       </Button>
                       
-                      {/* 页码按钮 */}
                       <div className="flex items-center space-x-1">
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                           let pageNum;
@@ -1534,7 +1325,6 @@ function QuestionsPageContent() {
             </div>
             
             <div className="space-y-4">
-              {/* 并发控制 */}
               <div>
                 <Label>并发数: {concurrencyLimit[0]}</Label>
                 <Slider
@@ -1550,7 +1340,6 @@ function QuestionsPageContent() {
                 </p>
               </div>
 
-              {/* 重试机制 */}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="enableRetry"
@@ -1590,15 +1379,5 @@ function QuestionsPageContent() {
         </div>
       )}
     </div>
-  );
-}
-
-export default function QuestionsPage() {
-  return (
-    <ErrorBoundary>
-      <FeedbackProvider>
-        <QuestionsPageContent />
-      </FeedbackProvider>
-    </ErrorBoundary>
   );
 }

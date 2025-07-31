@@ -1,399 +1,288 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { 
-  FiCheckCircle, 
-  FiXCircle, 
-  FiAlertTriangle, 
-  FiInfo,
-  FiX,
-  FiLoader
-} from 'react-icons/fi';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { AlertCircle, CheckCircle, Info, X } from 'lucide-react';
 
-// 消息类型
-export enum MessageType {
-  SUCCESS = 'success',
-  ERROR = 'error',
-  WARNING = 'warning',
-  INFO = 'info',
-  LOADING = 'loading'
-}
+// 反馈类型定义
+export type FeedbackType = 'success' | 'error' | 'warning' | 'info';
 
-// 消息接口
 export interface FeedbackMessage {
   id: string;
-  type: MessageType;
+  type: FeedbackType;
   title: string;
   message: string;
   duration?: number;
   persistent?: boolean;
-  actions?: Array<{
-    label: string;
-    action: () => void;
-    variant?: 'default' | 'outline' | 'destructive';
-  }>;
 }
 
-// 进度消息接口
-export interface ProgressMessage extends FeedbackMessage {
-  progress?: number;
-  current?: string;
-  total?: number;
-  completed?: number;
-}
-
-// 反馈系统上下文
+// 反馈上下文
 interface FeedbackContextType {
   messages: FeedbackMessage[];
-  showMessage: (message: Omit<FeedbackMessage, 'id'>) => string;
-  showSuccess: (title: string, message: string, duration?: number) => string;
-  showError: (title: string, message: string, persistent?: boolean) => string;
-  showWarning: (title: string, message: string, duration?: number) => string;
-  showInfo: (title: string, message: string, duration?: number) => string;
-  showProgress: (message: ProgressMessage) => string;
-  updateProgress: (id: string, progress: number, current?: string) => void;
-  removeMessage: (id: string) => void;
+  showFeedback: (message: Omit<FeedbackMessage, 'id'>) => void;
+  hideFeedback: (id: string) => void;
   clearAll: () => void;
 }
 
-// 创建上下文
-import { createContext, useContext } from 'react';
+const FeedbackContext = createContext<FeedbackContextType | undefined>(undefined);
 
-const FeedbackContext = createContext<FeedbackContextType | null>(null);
-
-// 反馈系统提供者
-export function FeedbackProvider({ children }: { children: React.ReactNode }) {
+// 反馈提供者组件
+export const FeedbackProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [messages, setMessages] = useState<FeedbackMessage[]>([]);
 
-  // 生成唯一ID
-  const generateId = () => `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  // 显示消息
-  const showMessage = (message: Omit<FeedbackMessage, 'id'>): string => {
-    const id = generateId();
+  const showFeedback = useCallback((message: Omit<FeedbackMessage, 'id'>) => {
+    const id = Date.now().toString();
     const newMessage: FeedbackMessage = {
       ...message,
       id,
-      duration: message.duration ?? (message.type === MessageType.ERROR ? 0 : 5000)
+      duration: message.duration ?? 5000,
     };
 
     setMessages(prev => [...prev, newMessage]);
 
-    // 自动移除非持久化消息
-    if (newMessage.duration && newMessage.duration > 0 && !newMessage.persistent) {
+    // 自动隐藏非持久化消息
+    if (!message.persistent && newMessage.duration && newMessage.duration > 0) {
       setTimeout(() => {
-        removeMessage(id);
+        hideFeedback(id);
       }, newMessage.duration);
     }
+  }, []);
 
-    return id;
-  };
-
-  // 快捷方法
-  const showSuccess = (title: string, message: string, duration = 5000) =>
-    showMessage({ type: MessageType.SUCCESS, title, message, duration });
-
-  const showError = (title: string, message: string, persistent = false) =>
-    showMessage({ type: MessageType.ERROR, title, message, persistent, duration: persistent ? 0 : 8000 });
-
-  const showWarning = (title: string, message: string, duration = 6000) =>
-    showMessage({ type: MessageType.WARNING, title, message, duration });
-
-  const showInfo = (title: string, message: string, duration = 4000) =>
-    showMessage({ type: MessageType.INFO, title, message, duration });
-
-  const showProgress = (message: ProgressMessage) =>
-    showMessage({ ...message, type: MessageType.LOADING, persistent: true });
-
-  // 更新进度
-  const updateProgress = (id: string, progress: number, current?: string) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === id 
-        ? { 
-            ...msg, 
-            message: current || msg.message,
-            ...(msg as ProgressMessage).progress !== undefined && { progress }
-          }
-        : msg
-    ));
-  };
-
-  // 移除消息
-  const removeMessage = (id: string) => {
+  const hideFeedback = useCallback((id: string) => {
     setMessages(prev => prev.filter(msg => msg.id !== id));
-  };
+  }, []);
 
-  // 清空所有消息
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
     setMessages([]);
-  };
-
-  const contextValue: FeedbackContextType = {
-    messages,
-    showMessage,
-    showSuccess,
-    showError,
-    showWarning,
-    showInfo,
-    showProgress,
-    updateProgress,
-    removeMessage,
-    clearAll
-  };
+  }, []);
 
   return (
-    <FeedbackContext.Provider value={contextValue}>
+    <FeedbackContext.Provider value={{ messages, showFeedback, hideFeedback, clearAll }}>
       {children}
       <FeedbackContainer />
     </FeedbackContext.Provider>
   );
-}
+};
 
 // 反馈容器组件
-function FeedbackContainer() {
+const FeedbackContainer: React.FC = () => {
   const context = useContext(FeedbackContext);
   if (!context) return null;
 
-  const { messages, removeMessage } = context;
+  const { messages, hideFeedback } = context;
 
   if (messages.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-3 max-w-md">
-      {messages.map(message => (
-        <FeedbackMessage
+    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+      {messages.map((message) => (
+        <FeedbackItem
           key={message.id}
           message={message}
-          onClose={() => removeMessage(message.id)}
+          onClose={() => hideFeedback(message.id)}
         />
       ))}
     </div>
   );
-}
+};
 
-// 单个反馈消息组件
-function FeedbackMessage({ 
-  message, 
-  onClose 
-}: { 
-  message: FeedbackMessage; 
+// 反馈项组件
+const FeedbackItem: React.FC<{
+  message: FeedbackMessage;
   onClose: () => void;
-}) {
+}> = ({ message, onClose }) => {
   const getIcon = () => {
     switch (message.type) {
-      case MessageType.SUCCESS:
-        return <FiCheckCircle className="h-5 w-5 text-green-600" />;
-      case MessageType.ERROR:
-        return <FiXCircle className="h-5 w-5 text-red-600" />;
-      case MessageType.WARNING:
-        return <FiAlertTriangle className="h-5 w-5 text-yellow-600" />;
-      case MessageType.INFO:
-        return <FiInfo className="h-5 w-5 text-blue-600" />;
-      case MessageType.LOADING:
-        return <FiLoader className="h-5 w-5 text-blue-600 animate-spin" />;
+      case 'success':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'error':
+        return <AlertCircle className="h-5 w-5 text-red-500" />;
+      case 'warning':
+        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+      case 'info':
+        return <Info className="h-5 w-5 text-blue-500" />;
       default:
-        return null;
+        return <Info className="h-5 w-5 text-gray-500" />;
     }
   };
 
-  const getBorderColor = () => {
+  const getBackgroundColor = () => {
     switch (message.type) {
-      case MessageType.SUCCESS:
-        return 'border-green-200 bg-green-50';
-      case MessageType.ERROR:
-        return 'border-red-200 bg-red-50';
-      case MessageType.WARNING:
-        return 'border-yellow-200 bg-yellow-50';
-      case MessageType.INFO:
-        return 'border-blue-200 bg-blue-50';
-      case MessageType.LOADING:
-        return 'border-blue-200 bg-blue-50';
+      case 'success':
+        return 'bg-green-50 border-green-200';
+      case 'error':
+        return 'bg-red-50 border-red-200';
+      case 'warning':
+        return 'bg-yellow-50 border-yellow-200';
+      case 'info':
+        return 'bg-blue-50 border-blue-200';
       default:
-        return 'border-gray-200 bg-white';
+        return 'bg-gray-50 border-gray-200';
     }
   };
-
-  const progressMessage = message as ProgressMessage;
 
   return (
-    <Card className={`${getBorderColor()} border shadow-lg animate-in slide-in-from-right-full duration-300`}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start space-x-3 flex-1">
-            {getIcon()}
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-medium text-gray-900 mb-1">
-                {message.title}
-              </h4>
-              <p className="text-sm text-gray-700 mb-2">
-                {message.message}
-              </p>
-              
-              {/* 进度条 */}
-              {message.type === MessageType.LOADING && progressMessage.progress !== undefined && (
-                <div className="space-y-2">
-                  <Progress value={progressMessage.progress} className="h-2" />
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>{progressMessage.current || '处理中...'}</span>
-                    {progressMessage.total && progressMessage.completed !== undefined && (
-                      <span>{progressMessage.completed}/{progressMessage.total}</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* 操作按钮 */}
-              {message.actions && message.actions.length > 0 && (
-                <div className="flex space-x-2 mt-3">
-                  {message.actions.map((action, index) => (
-                    <Button
-                      key={index}
-                      variant={action.variant || 'outline'}
-                      size="sm"
-                      onClick={action.action}
-                    >
-                      {action.label}
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* 关闭按钮 */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-          >
-            <FiX className="h-4 w-4" />
-          </Button>
+    <div className={`p-4 rounded-lg border shadow-lg ${getBackgroundColor()} animate-in slide-in-from-right`}>
+      <div className="flex items-start space-x-3">
+        {getIcon()}
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-medium text-gray-900">{message.title}</h4>
+          <p className="text-sm text-gray-600 mt-1">{message.message}</p>
         </div>
-      </CardContent>
-    </Card>
+        <button
+          onClick={onClose}
+          className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
   );
-}
+};
 
-// 使用反馈系统的Hook
-export function useFeedback() {
+// 使用反馈的Hook
+export const useFeedback = () => {
   const context = useContext(FeedbackContext);
   if (!context) {
     throw new Error('useFeedback must be used within a FeedbackProvider');
   }
   return context;
-}
+};
 
 // 错误处理Hook
-export function useErrorHandler() {
-  const feedback = useFeedback();
+export const useErrorHandler = () => {
+  const { showFeedback } = useFeedback();
 
-  const handleError = (error: any, title = '操作失败') => {
-    let message = '发生了未知错误，请稍后重试';
-    
-    if (error?.response?.data?.error) {
-      message = error.response.data.error;
-    } else if (error?.message) {
-      message = error.message;
-    } else if (typeof error === 'string') {
-      message = error;
-    }
+  const handleError = useCallback((error: Error | string, title?: string) => {
+    const errorMessage = typeof error === 'string' ? error : error.message;
+    showFeedback({
+      type: 'error',
+      title: title || '操作失败',
+      message: errorMessage,
+      duration: 8000,
+    });
+  }, [showFeedback]);
 
-    return feedback.showError(title, message, true);
-  };
+  return { handleError };
+};
 
-  const handleSuccess = (title: string, message: string) => {
-    return feedback.showSuccess(title, message);
-  };
+// 异步操作Hook
+export const useAsyncOperation = <T,>(
+  operation: () => Promise<T>,
+  options: {
+    loadingTitle?: string;
+    loadingMessage?: string;
+    successTitle?: string;
+    successMessage?: string;
+    errorTitle?: string;
+    showProgress?: boolean;
+  } = {}
+) => {
+  const { showFeedback } = useFeedback();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  const handleWarning = (title: string, message: string) => {
-    return feedback.showWarning(title, message);
-  };
-
-  return {
-    handleError,
-    handleSuccess,
-    handleWarning,
-    showInfo: feedback.showInfo,
-    showProgress: feedback.showProgress,
-    updateProgress: feedback.updateProgress,
-    removeMessage: feedback.removeMessage
-  };
-}
-
-// 异步操作包装器
-export function useAsyncOperation() {
-  const { handleError, handleSuccess, showProgress, updateProgress, removeMessage } = useErrorHandler();
-
-  const executeWithFeedback = async <T>(
-    operation: () => Promise<T>,
-    options: {
-      loadingTitle?: string;
-      loadingMessage?: string;
-      successTitle?: string;
-      successMessage?: string;
-      errorTitle?: string;
-      showProgress?: boolean;
-      onProgress?: (progress: number, current?: string) => void;
-    } = {}
-  ): Promise<T | null> => {
-    const {
-      loadingTitle = '处理中',
-      loadingMessage = '请稍候...',
-      successTitle = '操作成功',
-      successMessage = '操作已完成',
-      errorTitle = '操作失败',
-      showProgress: enableProgress = false
-    } = options;
-
-    let progressId: string | null = null;
-
+  const execute = useCallback(async (): Promise<T | null> => {
     try {
-      // 显示加载状态
-      if (enableProgress) {
-        progressId = showProgress({
-          id: '',
-          type: MessageType.LOADING,
-          title: loadingTitle,
-          message: loadingMessage,
-          progress: 0,
-          persistent: true
+      setLoading(true);
+      setError(null);
+
+      // 显示加载消息
+      if (options.loadingTitle || options.loadingMessage) {
+        showFeedback({
+          type: 'info',
+          title: options.loadingTitle || '处理中',
+          message: options.loadingMessage || '请稍候...',
+          persistent: true,
         });
       }
 
-      // 设置进度更新回调
-      if (options.onProgress && progressId) {
-        options.onProgress = (progress: number, current?: string) => {
-          updateProgress(progressId!, progress, current);
-        };
-      }
-
-      // 执行操作
       const result = await operation();
 
-      // 移除加载状态
-      if (progressId) {
-        removeMessage(progressId);
-      }
-
       // 显示成功消息
-      handleSuccess(successTitle, successMessage);
+      if (options.successTitle || options.successMessage) {
+        showFeedback({
+          type: 'success',
+          title: options.successTitle || '操作成功',
+          message: options.successMessage || '操作已完成',
+        });
+      }
 
       return result;
-    } catch (error) {
-      // 移除加载状态
-      if (progressId) {
-        removeMessage(progressId);
-      }
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('未知错误');
+      setError(error);
 
       // 显示错误消息
-      handleError(error, errorTitle);
-      return null;
-    }
-  };
+      showFeedback({
+        type: 'error',
+        title: options.errorTitle || '操作失败',
+        message: error.message,
+        duration: 8000,
+      });
 
-  return { executeWithFeedback };
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [operation, options, showFeedback]);
+
+  return {
+    execute,
+    loading,
+    error,
+  };
+};
+
+// 错误边界组件
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+export class ErrorBoundary extends React.Component<
+  { children: ReactNode; fallback?: ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: ReactNode; fallback?: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <AlertCircle className="h-8 w-8 text-red-500" />
+              <h1 className="text-xl font-semibold text-gray-900">出现错误</h1>
+            </div>
+            <p className="text-gray-600 mb-4">
+              应用程序遇到了一个错误。请刷新页面重试。
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              刷新页面
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }

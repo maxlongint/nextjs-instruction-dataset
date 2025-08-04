@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FiPlay, FiSettings, FiDownload, FiEdit, FiTrash2, FiCheck, FiList, FiFileText } from 'react-icons/fi';
+import { FiPlay, FiSettings, FiDownload, FiEdit, FiTrash2, FiCheck, FiList, FiFileText, FiInfo } from 'react-icons/fi';
 import {
   Select,
   SelectContent,

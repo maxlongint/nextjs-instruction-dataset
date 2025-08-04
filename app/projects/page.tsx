@@ -141,139 +141,144 @@ export default function ProjectsPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="space-y-6 pl-1 pr-4 py-1">
-      {/* 页面头部 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">项目管理</h1>
-          <p className="text-gray-600 mt-1">管理您的指令微调项目和数据集</p>
-        </div>
-        <button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <FiPlus className="mr-2 h-4 w-4" />
-          新建项目
-        </button>
-      </div>
+      <div className="space-y-6">
+        {/* 页面头部区域 */}
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">项目管理</h1>
+            <p className="text-gray-600 mt-1">管理您的指令微调项目和数据集</p>
+          </div>
+          {/* 新建项目按钮 */}
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <FiPlus className="mr-2 h-4 w-4" />
+            新建项目
+          </button>
+        </header>
 
-      {/* 加载状态 */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">加载中...</span>
-        </div>
-      ) : (
-        <>
-          {/* 项目列表 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => router.push(`/projects/${project.id}`)}
+        {/* 加载状态 */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600">加载中...</span>
+          </div>
+        ) : (
+          <>
+            {/* 项目卡片网格 */}
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {projects.map((project) => (
+                <article
+                  key={project.id}
+                  className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => router.push(`/projects/${project.id}`)}
+                >
+                    {/* 卡片头部 */}
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 truncate">
+                        {project.name}
+                      </h3>
+                      {/* 操作按钮组 */}
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(project);
+                          }}
+                          className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                          title="编辑项目"
+                        >
+                          <FiEdit className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDeleteModal(project);
+                          }}
+                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          title="删除项目"
+                        >
+                          <FiTrash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* 项目描述 */}
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                      {project.description || '暂无描述'}
+                    </p>
+                    
+                    {/* 项目统计信息 */}
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <span>数据集: {project.datasetCount} 个</span>
+                      <span>创建于: {new Date(project.createdAt).toLocaleDateString('zh-CN')}</span>
+                    </div>
+                </article>
+              ))}
+            </section>
+          </>
+        )}
+
+        {/* 空状态展示 */}
+        {!loading && projects.length === 0 && (
+          <section className="text-center py-12">
+            <div className="mx-auto h-12 w-12 text-gray-400">
+              <FiPlus className="h-full w-full" />
+            </div>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">暂无项目</h3>
+            <p className="mt-1 text-sm text-gray-500">开始创建您的第一个项目</p>
+            <div className="mt-6">
+              <button 
+                onClick={() => setIsCreateModalOpen(true)}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 truncate">
-                    {project.name}
-                  </h3>
-                  <div className="flex items-center space-x-2">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditModal(project);
-                      }}
-                      className="p-1 text-gray-400 hover:text-green-600 transition-colors"
-                      title="编辑项目"
-                    >
-                      <FiEdit className="h-4 w-4" />
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openDeleteModal(project);
-                      }}
-                      className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                      title="删除项目"
-                    >
-                      <FiTrash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-                
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {project.description || '暂无描述'}
-                </p>
-                
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <span>数据集: {project.datasetCount} 个</span>
-                  <span>创建于: {new Date(project.createdAt).toLocaleDateString('zh-CN')}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+                <FiPlus className="mr-2 h-4 w-4" />
+                新建项目
+              </button>
+            </div>
+          </section>
+        )}
 
-      {/* 空状态 */}
-      {!loading && projects.length === 0 && (
-        <div className="text-center py-12">
-          <div className="mx-auto h-12 w-12 text-gray-400">
-            <FiPlus className="h-full w-full" />
-          </div>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">暂无项目</h3>
-          <p className="mt-1 text-sm text-gray-500">开始创建您的第一个项目</p>
-          <div className="mt-6">
-            <button 
-              onClick={() => setIsCreateModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <FiPlus className="mr-2 h-4 w-4" />
-              新建项目
-            </button>
-          </div>
-        </div>
-      )}
+        {/* 模态框组件 */}
+        <ProjectFormModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSubmit={handleCreateProject}
+          title="新建项目"
+          isLoading={isSubmitting}
+        />
 
-      {/* 模态框 */}
-      <ProjectFormModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreateProject}
-        title="新建项目"
-        isLoading={isSubmitting}
-      />
+        <ProjectFormModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedProject(null);
+          }}
+          onSubmit={handleUpdateProject}
+          initialData={selectedProject ? {
+            name: selectedProject.name,
+            description: selectedProject.description || ''
+          } : undefined}
+          title="编辑项目"
+          isLoading={isSubmitting}
+        />
 
-      <ProjectFormModal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setSelectedProject(null);
-        }}
-        onSubmit={handleUpdateProject}
-        initialData={selectedProject ? {
-          name: selectedProject.name,
-          description: selectedProject.description || ''
-        } : undefined}
-        title="编辑项目"
-        isLoading={isSubmitting}
-      />
-
-      <ConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setSelectedProject(null);
-        }}
-        onConfirm={handleDeleteProject}
-        title="删除项目"
-        message={`确定要删除项目"${selectedProject?.name}"吗？此操作将同时删除该项目下的所有数据集和生成的问答数据，且无法恢复。`}
-        confirmText="删除"
-        cancelText="取消"
-        type="danger"
-        isLoading={isSubmitting}
-      />
-        </div>
+        <ConfirmModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setSelectedProject(null);
+          }}
+          onConfirm={handleDeleteProject}
+          title="删除项目"
+          message={`确定要删除项目"${selectedProject?.name}"吗？此操作将同时删除该项目下的所有数据集和生成的问答数据，且无法恢复。`}
+          confirmText="删除"
+          cancelText="取消"
+          type="danger"
+          isLoading={isSubmitting}
+        />
       </div>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FiPlay, FiSettings, FiDownload, FiEdit, FiTrash2, FiCheck, FiList, FiFileText, FiInfo } from 'react-icons/fi';
+import { FiPlay, FiSettings, FiDownload, FiTrash2, FiCheck, FiList, FiFileText, FiInfo } from 'react-icons/fi';
 import {
   Select,
   SelectContent,
@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { projectService, datasetService, questionService, answerService } from '../lib/data-service';
@@ -253,15 +252,16 @@ export default function AnswersPage() {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 flex flex-col space-y-6 p-4 min-h-0">
-        {/* 页面头部 */}
-        <div className="flex items-center justify-between flex-shrink-0">
+    <div className="h-full overflow-y-auto">
+      <div className="flex flex-col gap-6">
+        {/* 页面头部区域 */}
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">答案生成</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">答案生成</h1>
             <p className="text-gray-600 mt-1">为生成的问题创建对应答案</p>
           </div>
-          <div className="flex items-center space-x-3">
+          {/* 页面操作按钮组 */}
+          <div className="flex items-center gap-2 md:gap-3">
             <Button
               onClick={() => setShowPromptModal(true)}
               variant="outline"
@@ -278,63 +278,70 @@ export default function AnswersPage() {
               导出问答对
             </Button>
           </div>
-        </div>
+        </header>
 
-        <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
-          {/* 左侧：项目和数据集选择 + 问题列表 */}
-          <Card className="flex flex-col lg:w-1/3">
-            <CardHeader>
-              <CardTitle>项目和数据集选择</CardTitle>
-              <CardDescription>选择要处理的项目和数据集</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  选择项目
-                </label>
-                <Select value={selectedProject} onValueChange={setSelectedProject}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="请选择项目" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id.toString()}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedProject && (
+        {/* 主内容区域 - 响应式布局：移动端垂直堆叠，桌面端左右分栏 */}
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 flex-1 min-h-0">
+          {/* 左侧面板：项目选择和问题列表 */}
+          <aside className="flex flex-col w-full lg:w-1/3">
+            {/* 项目和数据集选择区域 */}
+            <section className="bg-white rounded-lg border border-gray-200 p-3 md:p-4 mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">项目和数据集选择</h3>
+              <p className="text-sm text-gray-600 mb-4">选择要处理的项目和数据集</p>
+              
+              <div className="space-y-4">
+                {/* 项目选择 */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    选择数据集
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    选择项目
                   </label>
-                  <Select value={selectedDataset} onValueChange={setSelectedDataset}>
+                  <Select value={selectedProject} onValueChange={setSelectedProject}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="请选择数据集" />
+                      <SelectValue placeholder="请选择项目" />
                     </SelectTrigger>
                     <SelectContent>
-                      {datasets.map((dataset) => (
-                        <SelectItem key={dataset.id} value={dataset.id.toString()}>
-                          {dataset.name}
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id.toString()}>
+                          {project.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-            </CardContent>
 
-            {/* 问题列表 */}
+                {/* 数据集选择 */}
+                {selectedProject && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      选择数据集
+                    </label>
+                    <Select value={selectedDataset} onValueChange={setSelectedDataset}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="请选择数据集" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {datasets.map((dataset) => (
+                          <SelectItem key={dataset.id} value={dataset.id.toString()}>
+                            {dataset.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* 问题列表区域 */}
             {selectedProject && selectedDataset && (
-              <div className="border-t border-gray-200 pt-4 mt-4 flex-1 flex flex-col min-h-0">
-                <div className="flex items-center justify-between mb-4 flex-shrink-0 px-6">
+              <section className="bg-white rounded-lg border border-gray-200 p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+                {/* 问题列表头部 */}
+                <div className="flex items-center justify-between mb-4 flex-shrink-0">
                   <div className="flex items-center">
                     <FiList className="mr-2 h-4 w-4 text-blue-500" />
-                    <h4 className="text-md font-semibold">问题列表</h4>
+                    <h4 className="text-md font-semibold text-gray-900">问题列表</h4>
                   </div>
+                  {/* 全选按钮 */}
                   <Button
                     onClick={toggleSelectAll}
                     variant="ghost"
@@ -345,13 +352,14 @@ export default function AnswersPage() {
                   </Button>
                 </div>
 
+                {/* 问题列表内容 */}
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                     <span className="ml-3 text-sm text-gray-600">加载中...</span>
                   </div>
                 ) : (
-                  <div className="space-y-3 flex-1 overflow-y-auto min-h-0 px-6 pb-6">
+                  <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-2">
                     {questionsWithAnswers.length === 0 ? (
                       <div className="text-center py-8 rounded-lg border border-dashed border-gray-300 bg-gray-50">
                         <FiFileText className="mx-auto h-8 w-8 text-gray-400 mb-2" />
@@ -359,13 +367,13 @@ export default function AnswersPage() {
                       </div>
                     ) : (
                       questionsWithAnswers.map((item) => (
-                        <div
+                        <article
                           key={item.id}
                           className={`border rounded-lg p-3 text-sm transition-colors shadow-sm ${
                             item.answer ? 'bg-green-50 border-green-200 hover:bg-green-100' : 'bg-white hover:bg-gray-50'
                           }`}
                         >
-                          <div className="flex items-start space-x-3">
+                          <div className="flex items-start gap-3">
                             {!item.answer && (
                               <Checkbox
                                 checked={selectedQuestions.includes(item.id)}
@@ -385,164 +393,178 @@ export default function AnswersPage() {
                               )}
                             </div>
                           </div>
-                        </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+          </aside>
+
+          {/* 右侧面板：答案列表和管理 */}
+          <main className="flex flex-col w-full lg:flex-1 min-h-0">
+            {/* 答案管理区域 */}
+            <section className="bg-white rounded-lg border border-gray-200 flex flex-col flex-1 min-h-0 overflow-hidden">
+              {/* 答案管理头部 */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 border-b border-gray-200 flex-shrink-0">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">答案列表</h3>
+                  <p className="text-sm text-gray-600 mt-1">查看和管理已生成的答案</p>
+                </div>
+                {/* 生成答案按钮 */}
+                <Button
+                  onClick={handleGenerateAnswers}
+                  disabled={generating || selectedQuestions.length === 0}
+                  className="flex items-center"
+                >
+                  {generating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      <FiPlay className="mr-2 h-4 w-4" />
+                      生成答案 {selectedQuestions.length > 0 && `(${selectedQuestions.length})`}
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* 答案列表内容 */}
+              <div className="flex-1 min-h-0 p-4 overflow-y-auto">
+                {/* 生成进度指示器 */}
+                {generating && (
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-blue-900">正在生成答案...</span>
+                      <span className="text-sm text-blue-700">{generatingProgress.current} / {generatingProgress.total}</span>
+                    </div>
+                    <Progress 
+                      value={generatingProgress.total > 0 ? (generatingProgress.current / generatingProgress.total) * 100 : 0}
+                      className="h-2"
+                    />
+                  </div>
+                )}
+
+                {/* 答案列表或空状态 */}
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-600">加载中...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-4 flex-1 min-h-0 pr-2">
+                    {!selectedProject ? (
+                      <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                        <FiFileText className="mx-auto h-10 w-10 text-gray-400 mb-3" />
+                        <p className="text-gray-500 font-medium">请先选择项目</p>
+                        <p className="text-sm text-gray-400 mt-1">从左侧选择一个项目开始</p>
+                      </div>
+                    ) : !selectedDataset ? (
+                      <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                        <FiFileText className="mx-auto h-10 w-10 text-gray-400 mb-3" />
+                        <p className="text-gray-500 font-medium">请选择数据集</p>
+                        <p className="text-sm text-gray-400 mt-1">从左侧选择一个数据集继续</p>
+                      </div>
+                    ) : questionsWithAnswers.length === 0 ? (
+                      <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                        <FiFileText className="mx-auto h-10 w-10 text-gray-400 mb-3" />
+                        <p className="text-gray-500 font-medium">该数据集暂无问题数据</p>
+                        <p className="text-sm text-gray-400 mt-1">请先生成问题或选择其他数据集</p>
+                      </div>
+                    ) : (
+                      questionsWithAnswers.map((item) => (
+                        <article
+                          key={item.id}
+                          className={`border rounded-lg shadow-sm overflow-hidden transition-all ${
+                            item.answer ? 'border-green-200' : 'border-gray-200'
+                          }`}
+                        >
+                          {/* 问题信息区域 */}
+                          <div className="flex items-start p-4 pb-3">
+                            <div className="flex items-start gap-3 flex-1">
+                              {!item.answer && (
+                                <Checkbox
+                                  checked={selectedQuestions.includes(item.id)}
+                                  onCheckedChange={() => toggleQuestionSelection(item.id)}
+                                  className="mt-1"
+                                />
+                              )}
+                              <div className="flex-1">
+                                {/* 项目和数据集标签 */}
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="outline" className="text-xs font-normal">
+                                    {getProjectName(item.projectId)} / {getDatasetName(item.datasetId)}
+                                  </Badge>
+                                  {item.answer ? (
+                                    <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-200">
+                                      <FiCheck className="mr-1 h-3 w-3" />
+                                      已生成答案
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                                      待生成
+                                    </Badge>
+                                  )}
+                                </div>
+                                {/* 问题内容 */}
+                                <div className="font-medium mb-2 text-gray-900">
+                                  {item.generatedQuestion}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* 删除按钮 */}
+                            {item.answer && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteAnswer(item.answer!.id)}
+                                className="text-gray-400 hover:text-red-600 hover:bg-red-50 -mr-2 -mt-2"
+                              >
+                                <FiTrash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                          
+                          {/* 答案内容区域 */}
+                          {item.answer && (
+                            <div className="px-4 pb-4">
+                              <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                                <div className="text-sm text-gray-600 mb-1 font-medium">答案:</div>
+                                <div className="text-gray-800">{item.answer.generatedAnswer}</div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* 时间信息区域 */}
+                          <footer className="border-t bg-gray-50 py-2 px-4 text-xs text-gray-500">
+                            问题生成时间: {new Date(item.createdAt).toLocaleString('zh-CN')}
+                            {item.answer && (
+                              <span className="ml-4">
+                                答案生成时间: {new Date(item.answer.createdAt).toLocaleString('zh-CN')}
+                              </span>
+                            )}
+                          </footer>
+                        </article>
                       ))
                     )}
                   </div>
                 )}
               </div>
-            )}
-          </Card>
-
-          {/* 右侧：答案列表和结果 */}
-          <Card className="flex flex-col flex-1 min-h-0">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <CardTitle>答案列表</CardTitle>
-                <CardDescription>查看和管理已生成的答案</CardDescription>
-              </div>
-              <Button
-                onClick={handleGenerateAnswers}
-                disabled={generating || selectedQuestions.length === 0}
-                className="flex items-center"
-              >
-                {generating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    <FiPlay className="mr-2 h-4 w-4" />
-                    生成答案 {selectedQuestions.length > 0 && `(${selectedQuestions.length})`}
-                  </>
-                )}
-              </Button>
-            </CardHeader>
-
-            <CardContent className="flex-1 min-h-0 pt-0 overflow-y-auto max-h-[calc(100vh-220px)]">
-              {/* 生成进度 */}
-              {generating && (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-blue-900">正在生成答案...</span>
-                    <span className="text-sm text-blue-700">{generatingProgress.current} / {generatingProgress.total}</span>
-                  </div>
-                  <Progress 
-                    value={generatingProgress.total > 0 ? (generatingProgress.current / generatingProgress.total) * 100 : 0}
-                    className="h-2"
-                  />
-                </div>
-              )}
-
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-gray-600">加载中...</span>
-                </div>
-              ) : (
-                <div className="space-y-5 flex-1 min-h-0 pr-2">
-                  {!selectedProject ? (
-                    <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
-                      <FiFileText className="mx-auto h-10 w-10 text-gray-400 mb-3" />
-                      <p className="text-gray-500 font-medium">请先选择项目</p>
-                      <p className="text-sm text-gray-400 mt-1">从左侧选择一个项目开始</p>
-                    </div>
-                  ) : !selectedDataset ? (
-                    <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
-                      <FiFileText className="mx-auto h-10 w-10 text-gray-400 mb-3" />
-                      <p className="text-gray-500 font-medium">请选择数据集</p>
-                      <p className="text-sm text-gray-400 mt-1">从左侧选择一个数据集继续</p>
-                    </div>
-                  ) : questionsWithAnswers.length === 0 ? (
-                    <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
-                      <FiFileText className="mx-auto h-10 w-10 text-gray-400 mb-3" />
-                      <p className="text-gray-500 font-medium">该数据集暂无问题数据</p>
-                      <p className="text-sm text-gray-400 mt-1">请先生成问题或选择其他数据集</p>
-                    </div>
-                  ) : (
-                    questionsWithAnswers.map((item) => (
-                      <Card
-                        key={item.id}
-                        className={`border shadow-sm overflow-hidden transition-all ${
-                          item.answer ? 'border-green-200' : ''
-                        }`}
-                      >
-                        <div className="flex items-start p-4 pb-3">
-                          <div className="flex items-start space-x-3 flex-1">
-                            {!item.answer && (
-                              <Checkbox
-                                checked={selectedQuestions.includes(item.id)}
-                                onCheckedChange={() => toggleQuestionSelection(item.id)}
-                                className="mt-1"
-                              />
-                            )}
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <Badge variant="outline" className="text-xs font-normal">
-                                  {getProjectName(item.projectId)} / {getDatasetName(item.datasetId)}
-                                </Badge>
-                                {item.answer ? (
-                                  <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-200">
-                                    <FiCheck className="mr-1 h-3 w-3" />
-                                    已生成答案
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                    待生成
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="font-medium mb-2 text-gray-900">
-                                {item.generatedQuestion}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {item.answer && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteAnswer(item.answer!.id)}
-                              className="text-gray-400 hover:text-red-600 hover:bg-red-50 -mr-2 -mt-2"
-                            >
-                              <FiTrash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        
-                        {item.answer && (
-                          <div className="px-4 pb-4">
-                            <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                              <div className="text-sm text-gray-600 mb-1 font-medium">答案:</div>
-                              <div className="text-gray-800">{item.answer.generatedAnswer}</div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        <CardFooter className="border-t bg-gray-50 py-2 px-4 text-xs text-gray-500">
-                          问题生成时间: {new Date(item.createdAt).toLocaleString('zh-CN')}
-                          {item.answer && (
-                            <span className="ml-4">
-                              答案生成时间: {new Date(item.answer.createdAt).toLocaleString('zh-CN')}
-                            </span>
-                          )}
-                        </CardFooter>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            </section>
+          </main>
         </div>
 
         {/* 提示词配置弹框 */}
         {showPromptModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <Card className="w-full max-w-2xl mx-4 shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle>答案提示词配置</CardTitle>
+            <div className="w-full max-w-2xl mx-4 bg-white rounded-lg shadow-lg">
+              {/* 弹框头部 */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">答案提示词配置</h3>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -553,11 +575,13 @@ export default function AnswersPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </Button>
-              </CardHeader>
-              <CardContent>
+              </div>
+              
+              {/* 弹框内容 */}
+              <div className="p-4">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">提示词模板</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">提示词模板</label>
                     <textarea
                       className="w-full h-40 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                       placeholder="请输入答案生成的提示词模板..."
@@ -570,8 +594,10 @@ export default function AnswersPage() {
                     支持使用 <code className="mx-1 px-1 py-0.5 bg-gray-100 rounded">{'{question}'}</code> 作为问题占位符
                   </div>
                 </div>
-              </CardContent>
-              <CardFooter className="flex justify-end space-x-3 border-t pt-4">
+              </div>
+              
+              {/* 弹框底部 */}
+              <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
                 <Button
                   variant="outline"
                   onClick={() => setShowPromptModal(false)}
@@ -583,8 +609,8 @@ export default function AnswersPage() {
                 >
                   保存
                 </Button>
-              </CardFooter>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
       </div>

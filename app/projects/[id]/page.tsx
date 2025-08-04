@@ -359,8 +359,8 @@ export default function ProjectDetailPage() {
   return (
     <div className="space-y-6">
       {/* 项目头部信息 */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
+      <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
             <p className="text-gray-600 mt-1">{project.description || '暂无描述'}</p>
@@ -370,7 +370,7 @@ export default function ProjectDetailPage() {
               <span>数据集数量: {projectDatasets.length}</span>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button
               onClick={() => router.push('/projects')}
               className="flex items-center px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -381,10 +381,10 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* 左侧：数据集管理 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <h2 className="text-lg font-semibold text-gray-900">数据集管理</h2>
             <div className="relative">
               <input
@@ -475,7 +475,7 @@ export default function ProjectDetailPage() {
 
         {/* 右侧：分段预览和选择 */}
         <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-50 to-white border-b border-gray-200 px-6 py-4">
+          <div className="bg-gradient-to-r from-blue-50 to-white border-b border-gray-200 px-4 md:px-6 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center">
                 <div className="h-8 w-1 bg-blue-600 rounded-full mr-3"></div>
@@ -499,7 +499,7 @@ export default function ProjectDetailPage() {
               )}
             </div>
           </div>
-          <div className="p-6">
+          <div className="p-4 md:p-6">
 
           {!selectedDataset ? (
             <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
@@ -512,7 +512,7 @@ export default function ProjectDetailPage() {
           ) : (
             <>
               {/* 搜索和操作栏 */}
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 md:p-4 mb-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <div className="relative w-full sm:w-64">
@@ -566,7 +566,7 @@ export default function ProjectDetailPage() {
                 </div>
               ) : showSegments && segments.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-1 gap-4 mb-6">
+                  <div className="grid grid-cols-1 gap-3 md:gap-4 mb-6">
                     {segments.map((segment) => (
                       <div
                         key={segment.id}

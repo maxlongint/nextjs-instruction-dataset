@@ -2,8 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { FiMenu } from 'react-icons/fi';
 
-export default function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export default function Header({ onMenuClick }: HeaderProps) {
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState<string>('');
   const [mounted, setMounted] = useState(false);
@@ -33,22 +38,36 @@ export default function Header() {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6">
+      {/* 左侧品牌区域 */}
       <div className="flex items-center">
+        {/* 移动端菜单按钮 */}
+        <button
+          onClick={onMenuClick}
+          className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 lg:hidden mr-2"
+          aria-label="打开菜单"
+        >
+          <FiMenu className="h-6 w-6" />
+        </button>
+        
         <h1 
-          className="text-xl font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+          className="text-lg md:text-xl font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
           onClick={handleTitleClick}
           title="返回首页"
         >
-          指令监督微调生成器
+          <span className="hidden sm:inline">指令监督微调生成器</span>
+          <span className="sm:hidden">指令生成器</span>
         </h1>
       </div>
       
-      <div className="flex items-center space-x-4">
+      {/* 右侧状态信息区域 */}
+      <div className="flex items-center gap-4">
+        {/* 当前时间显示 */}
         <div className="text-sm text-gray-500">
           {mounted ? currentTime : '--:--:--'}
         </div>
-        <div className="flex items-center space-x-2">
+        {/* 系统状态指示器 */}
+        <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
           <span className="text-sm text-gray-600">系统正常</span>
         </div>

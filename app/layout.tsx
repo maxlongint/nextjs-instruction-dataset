@@ -26,12 +26,15 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable}`}
         suppressHydrationWarning
       >
-        <MainLayout>
-          {children}
-        </MainLayout>
+        {/* 根容器 - 包含所有页面内容 */}
+        <div className="min-h-screen flex flex-col bg-gray-50">
+          <MainLayout>
+            {children}
+          </MainLayout>
+        </div>
       </body>
     </html>
   );

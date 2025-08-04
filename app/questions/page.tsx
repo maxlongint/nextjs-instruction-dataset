@@ -706,27 +706,6 @@ export default function QuestionsPage() {
     }
   };
 
-  // 删除问题 - 使用模拟数据
-  const handleDeleteQuestion = async (questionId: number) => {
-    if (!confirm('确定要删除这个问题吗？')) return;
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const success = questionService.delete(questionId);
-      
-      if (success) {
-        await fetchQuestions(selectedProject, currentPage, resultDatasetFilter);
-        alert('问题删除成功');
-      } else {
-        alert('删除失败: 问题不存在');
-      }
-    } catch (error) {
-      console.error('删除问题失败:', error);
-      alert('删除问题失败');
-    }
-  };
-
   // 查看问题详情
   const handleViewQuestionDetail = async (questionId: number) => {
     try {
@@ -769,630 +748,639 @@ export default function QuestionsPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="flex flex-col space-y-6 pl-1 pr-4 py-1">
-      {/* 页面头部 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">问题生成</h1>
-          <p className="text-gray-600 mt-1">从数据集片段生成训练问题</p>
-          <div className="mt-2">
-            <span className={`text-sm px-3 py-1 rounded-full ${
-              systemStatus.aiConfigured 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-yellow-100 text-yellow-700'
-            }`}>
-              {systemStatus.message}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <FiCpu className="h-4 w-4 text-gray-500" />
-            <Select 
-              value={selectedModel} 
-              onValueChange={handleModelChange}
-              disabled={modelsLoading || availableModels.length === 0}
-            >
-              <SelectTrigger className="w-80">
-                <SelectValue placeholder={
-                  modelsLoading ? "加载模型中..." : 
-                  availableModels.length === 0 ? "请先配置AI设置" : 
-                  "选择模型"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {availableModels.map((model) => (
-                  <SelectItem key={model} value={model}>
-                    {model}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {modelsLoading && (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
-        {/* 左侧：数据集选择和分段选择 */}
-        <div className="flex flex-col space-y-6 flex-1 lg:flex-1 h-full">
-          {/* 数据集选择 */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">数据集选择</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  选择项目
-                </label>
-                <Select value={selectedProject} onValueChange={setSelectedProject}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="请选择项目" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id.toString()}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  选择数据集
-                </label>
-                <div className="flex space-x-3">
-                  <Select 
-                    value={selectedDataset} 
-                    onValueChange={setSelectedDataset}
-                    disabled={!selectedProject}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="请选择数据集" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {datasets.map((dataset) => (
-                        <SelectItem key={dataset.id} value={dataset.id.toString()}>
-                          {dataset.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedDataset && (
-                    <button
-                      onClick={() => fetchSegments(selectedDataset)}
-                      disabled={segmentsLoading}
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
-                    >
-                      {segmentsLoading ? '加载中...' : '查看分段'}
-                    </button>
-                  )}
-                </div>
-              </div>
+      <div className="flex flex-col gap-6">
+        {/* 页面头部区域 */}
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">问题生成</h1>
+            <p className="text-gray-600 mt-1">从数据集片段生成训练问题</p>
+            {/* 系统状态指示器 */}
+            <div className="mt-2">
+              <span className={`text-sm px-3 py-1 rounded-full ${
+                systemStatus.aiConfigured 
+                  ? 'bg-green-100 text-green-700' 
+                  : 'bg-yellow-100 text-yellow-700'
+              }`}>
+                {systemStatus.message}
+              </span>
             </div>
           </div>
-
-          {/* 分段选择 */}
-          {showSegments && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
-              <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  分段选择 ({selectedSegments.length}/{segments.length})
-                </h3>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs text-gray-500">
-                    已展开 {expandedSegments.length}/{segments.length}
-                  </span>
-                  <button
-                    onClick={handleExpandAllSegments}
-                    className="text-sm text-blue-600 hover:text-blue-700 transition-colors px-2 py-1 rounded hover:bg-blue-50"
-                  >
-                    {expandedSegments.length === segments.length ? '📁 折叠全部' : '📂 展开全部'}
-                  </button>
-                  <button
-                    onClick={handleSelectAllSegments}
-                    className="text-sm text-blue-600 hover:text-blue-700 transition-colors px-2 py-1 rounded hover:bg-blue-50"
-                  >
-                    {selectedSegments.length === segments.length ? '取消全选' : '全选'}
-                  </button>
-                </div>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-2">
-                {segments.map((segment, index) => (
-                  <div
-                    key={index}
-                    className={`border rounded-lg transition-colors ${
-                      selectedSegments.includes(index)
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div 
-                      className="p-3 cursor-pointer"
-                      onClick={() => handleSegmentSelect(index)}
-                    >
-                      <div className="flex items-start space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedSegments.includes(index)}
-                          onChange={() => handleSegmentSelect(index)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <div className="flex-1 min-w-0">
-                          {segment.segmentId && (
-                            <div className="text-xs text-gray-500 mb-1">
-                              ID: {segment.segmentId}
-                            </div>
-                          )}
-                          {expandedSegments.includes(index) ? (
-                            <div className="text-sm text-gray-700 whitespace-pre-wrap">
-                              {segment.content}
-                            </div>
-                          ) : (
-                            <div className="text-sm text-gray-700">
-                              {getSegmentPreview(segment.content)}
-                            </div>
-                          )}
-                          {expandedSegments.includes(index) && (
-                            <div className="mt-2 text-xs text-gray-400">
-                              字符数: {segment.content.length}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            selectedSegments.includes(index) 
-                              ? 'bg-blue-100 text-blue-700' 
-                              : 'bg-gray-100 text-gray-500'
-                          }`}>
-                            {selectedSegments.includes(index) ? '✅ 已选中' : '📄 点击选择'}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleSegmentExpand(index);
-                            }}
-                            className={`px-2 py-1 rounded text-xs transition-colors ${
-                              expandedSegments.includes(index) 
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                            }`}
-                          >
-                            {expandedSegments.includes(index) ? '📁 折叠' : '📂 展开'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 右侧：生成按钮和生成结果 */}
-        <div className="flex flex-col space-y-6 flex-1 lg:flex-1 h-full">
-          {/* 生成配置和控制 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FiSettings className="mr-2 h-5 w-5" />
-                生成配置
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  已选择 {selectedSegments.length} 个分段，当前模型: {selectedModel || '未选择'}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAdvancedSettings(true)}
-                  className="flex items-center"
-                >
-                  <FiSettings className="mr-1 h-3 w-3" />
-                  高级设置
-                </Button>
-              </div>
-
-              <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                并发数: {concurrencyLimit[0]} | 重试: {enableRetry ? `启用(${maxRetries[0]}次)` : '禁用'}
-              </div>
-
-              {(validationErrors.length > 0 || validationWarnings.length > 0) && (
-                <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
-                  {validationErrors.map((error, index) => (
-                    <div key={index} className="flex items-center text-red-600 text-sm">
-                      <FiXCircle className="mr-1 h-4 w-4" />
-                      {error}
-                    </div>
-                  ))}
-                  {validationWarnings.map((warning, index) => (
-                    <div key={index} className="flex items-center text-yellow-600 text-sm">
-                      <FiAlertTriangle className="mr-1 h-4 w-4" />
-                      {warning}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <Button
-                onClick={handleGenerateQuestions}
-                disabled={generating || validationErrors.length > 0 || !selectedProject || !selectedDataset || selectedSegments.length === 0}
-                className="w-full"
-                size="lg"
+          {/* 模型选择区域 */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <FiCpu className="h-4 w-4 text-gray-500" />
+              <Select 
+                value={selectedModel} 
+                onValueChange={handleModelChange}
+                disabled={modelsLoading || availableModels.length === 0}
               >
-                {generating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    <FiPlay className="mr-2 h-4 w-4" />
-                    开始生成问题
-                  </>
-                )}
-              </Button>
-
-              {generating && (
-                <div className="space-y-3 p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>生成进度</span>
-                    <span>{progress.completed + progress.failed}/{progress.total}</span>
-                  </div>
-                  <Progress value={progress.percentage} className="w-full" />
-                  <div className="text-sm text-gray-600">
-                    {progress.current}
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span className="flex items-center">
-                      <FiCheckCircle className="mr-1 h-3 w-3 text-green-500" />
-                      成功: {progress.completed}
-                    </span>
-                    <span className="flex items-center">
-                      <FiXCircle className="mr-1 h-3 w-3 text-red-500" />
-                      失败: {progress.failed}
-                    </span>
-                  </div>
-                </div>
+                <SelectTrigger className="w-80">
+                  <SelectValue placeholder={
+                    modelsLoading ? "加载模型中..." : 
+                    availableModels.length === 0 ? "请先配置AI设置" : 
+                    "选择模型"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map((model) => (
+                    <SelectItem key={model} value={model}>
+                      {model}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {modelsLoading && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
               )}
+            </div>
+          </div>
+        </header>
 
-              {generationSummary && (
-                <div className="space-y-3 p-3 bg-green-50 rounded-lg">
-                  <div className="font-medium text-green-800">生成完成</div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center">
-                      <FiCheckCircle className="mr-1 h-4 w-4 text-green-500" />
-                      成功: {generationSummary.successful}
-                    </div>
-                    <div className="flex items-center">
-                      <FiXCircle className="mr-1 h-4 w-4 text-red-500" />
-                      失败: {generationSummary.failed}
-                    </div>
-                  </div>
-                  
-                  <div className="text-sm text-gray-600">
-                    总计生成 {generationSummary.questions.length} 个问题
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* 生成结果 */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="flex items-center justify-between mb-4 flex-shrink-0">
-              <h3 className="text-lg font-semibold text-gray-900">生成结果</h3>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <label className="text-sm text-gray-600">筛选数据集:</label>
-                  <Select 
-                    value={resultDatasetFilter} 
-                    onValueChange={(value) => {
-                      setResultDatasetFilter(value);
-                      if (selectedProject) {
-                        fetchQuestions(selectedProject, 1, value);
-                        setCurrentPage(1);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="全部数据集" />
+        {/* 主内容区域 - 响应式布局：移动端垂直堆叠，桌面端左右分栏 */}
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 flex-1 min-h-0">
+          {/* 左侧面板：数据集选择和分段选择 */}
+          <aside className="flex flex-col gap-4 lg:gap-6 w-full lg:w-1/2 h-full">
+            {/* 数据集选择区域 */}
+            <section className="bg-white rounded-lg border border-gray-200 p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">数据集选择</h3>
+              
+              <div className="space-y-4">
+                {/* 项目选择 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    选择项目
+                  </label>
+                  <Select value={selectedProject} onValueChange={setSelectedProject}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="请选择项目" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">全部数据集</SelectItem>
-                      {datasets.map((dataset) => (
-                        <SelectItem key={dataset.id} value={dataset.id.toString()}>
-                          {dataset.name}
-                          {dataset.id.toString() === selectedDataset && " (当前)"}
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id.toString()}>
+                          {project.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      if (selectedProject) {
-                        fetchQuestions(selectedProject, currentPage, resultDatasetFilter);
-                      }
-                    }}
-                    className="flex items-center"
-                  >
-                    <FiRefreshCw className="mr-1 h-3 w-3" />
-                    刷新
-                  </Button>
+                </div>
+
+                {/* 数据集选择 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    选择数据集
+                  </label>
+                  <div className="flex gap-3">
+                    <Select 
+                      value={selectedDataset} 
+                      onValueChange={setSelectedDataset}
+                      disabled={!selectedProject}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="请选择数据集" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {datasets.map((dataset) => (
+                          <SelectItem key={dataset.id} value={dataset.id.toString()}>
+                            {dataset.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedDataset && (
+                      <button
+                        onClick={() => fetchSegments(selectedDataset)}
+                        disabled={segmentsLoading}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+                      >
+                        {segmentsLoading ? '加载中...' : '查看分段'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* 分段选择区域 */}
+            {showSegments && (
+              <section className="bg-white rounded-lg border border-gray-200 p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+                {/* 分段选择头部 */}
+                <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    分段选择 ({selectedSegments.length}/{segments.length})
+                  </h3>
+                  {/* 分段操作按钮组 */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">
+                      已展开 {expandedSegments.length}/{segments.length}
+                    </span>
+                    <button
+                      onClick={handleExpandAllSegments}
+                      className="text-sm text-blue-600 hover:text-blue-700 transition-colors px-2 py-1 rounded hover:bg-blue-50"
+                    >
+                      {expandedSegments.length === segments.length ? '📁 折叠全部' : '📂 展开全部'}
+                    </button>
+                    <button
+                      onClick={handleSelectAllSegments}
+                      className="text-sm text-blue-600 hover:text-blue-700 transition-colors px-2 py-1 rounded hover:bg-blue-50"
+                    >
+                      {selectedSegments.length === segments.length ? '取消全选' : '全选'}
+                    </button>
+                  </div>
                 </div>
                 
-                <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                  <FiDownload className="mr-2 h-4 w-4" />
-                  导出数据
-                </button>
-              </div>
-            </div>
-            
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-gray-600">加载中...</span>
-              </div>
-            ) : (
-              <>
-                <div className="flex-1 overflow-y-auto space-y-4 min-h-0 pr-2">
-                  {questions.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      暂无生成的问题
-                    </div>
-                  ) : (
-                    questions.map((question) => (
-                      <div
-                        key={question.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                {/* 分段列表 */}
+                <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-2">
+                  {segments.map((segment, index) => (
+                    <article
+                      key={index}
+                      className={`border rounded-lg transition-colors ${
+                        selectedSegments.includes(index)
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div 
+                        className="p-3 cursor-pointer"
+                        onClick={() => handleSegmentSelect(index)}
                       >
-                        <div className="mb-2">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="text-sm text-gray-500">
-                              {getProjectName(question.projectId)} / {getDatasetName(question.datasetId)}
-                            </div>
-                            <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                              数据集: {getDatasetName(question.datasetId)}
-                            </div>
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedSegments.includes(index)}
+                            onChange={() => handleSegmentSelect(index)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <div className="flex-1 min-w-0">
+                            {segment.segmentId && (
+                              <div className="text-xs text-gray-500 mb-1">
+                                ID: {segment.segmentId}
+                              </div>
+                            )}
+                            {expandedSegments.includes(index) ? (
+                              <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                                {segment.content}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-700">
+                                {getSegmentPreview(segment.content)}
+                              </div>
+                            )}
+                            {expandedSegments.includes(index) && (
+                              <div className="mt-2 text-xs text-gray-400">
+                                字符数: {segment.content.length}
+                              </div>
+                            )}
                           </div>
-                          <div className="font-medium text-gray-900">
-                            {question.generatedQuestion}
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div className="text-xs text-gray-400">
-                            生成时间: {new Date(question.createdAt).toLocaleString('zh-CN')}
-                          </div>
-                          <div className="flex space-x-2">
-                            <button 
-                              onClick={() => handleViewQuestionDetail(question.id)}
-                              className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                          {/* 分段状态和操作按钮 */}
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              selectedSegments.includes(index) 
+                                ? 'bg-blue-100 text-blue-700' 
+                                : 'bg-gray-100 text-gray-500'
+                            }`}>
+                              {selectedSegments.includes(index) ? '✅ 已选中' : '📄 点击选择'}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleSegmentExpand(index);
+                              }}
+                              className={`px-2 py-1 rounded text-xs transition-colors ${
+                                expandedSegments.includes(index) 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              }`}
                             >
-                              <FiInfo className="inline mr-1 h-3 w-3" />
-                              详情
+                              {expandedSegments.includes(index) ? '📁 折叠' : '📂 展开'}
                             </button>
                           </div>
                         </div>
                       </div>
-                    ))
-                  )}
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+          </aside>
+
+          {/* 右侧面板：生成配置和结果 */}
+          <main className="flex flex-col gap-4 lg:gap-6 w-full lg:w-1/2 h-full">
+            {/* 生成配置区域 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <FiSettings className="mr-2 h-5 w-5" />
+                  生成配置
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    已选择 {selectedSegments.length} 个分段，当前模型: {selectedModel || '未选择'}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAdvancedSettings(true)}
+                    className="flex items-center"
+                  >
+                    <FiSettings className="mr-1 h-3 w-3" />
+                    高级设置
+                  </Button>
                 </div>
 
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 flex-shrink-0">
-                    <div className="text-sm text-gray-600">
-                      共 {totalQuestions} 条记录，第 {currentPage} / {totalPages} 页
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage <= 1}
-                      >
-                        <FiChevronLeft className="h-4 w-4" />
-                        上一页
-                      </Button>
-                      
-                      <div className="flex items-center space-x-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum;
-                          if (totalPages <= 5) {
-                            pageNum = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i;
-                          } else {
-                            pageNum = currentPage - 2 + i;
-                          }
-                          
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={currentPage === pageNum ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handlePageChange(pageNum)}
-                              className="w-8 h-8 p-0"
-                            >
-                              {pageNum}
-                            </Button>
-                          );
-                        })}
+                <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                  并发数: {concurrencyLimit[0]} | 重试: {enableRetry ? `启用(${maxRetries[0]}次)` : '禁用'}
+                </div>
+
+                {(validationErrors.length > 0 || validationWarnings.length > 0) && (
+                  <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
+                    {validationErrors.map((error, index) => (
+                      <div key={index} className="flex items-center text-red-600 text-sm">
+                        <FiXCircle className="mr-1 h-4 w-4" />
+                        {error}
                       </div>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage >= totalPages}
-                      >
-                        下一页
-                        <FiChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    ))}
+                    {validationWarnings.map((warning, index) => (
+                      <div key={index} className="flex items-center text-yellow-600 text-sm">
+                        <FiAlertTriangle className="mr-1 h-4 w-4" />
+                        {warning}
+                      </div>
+                    ))}
                   </div>
                 )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* 问题详情对话框 */}
-      <AlertDialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <AlertDialogContent className="max-w-3xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl">问题详情</AlertDialogTitle>
-            <AlertDialogDescription className="text-base text-gray-700">
-              {currentQuestionDetail?.datasetName && (
-                <div className="mb-2">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                    数据集: {currentQuestionDetail.datasetName}
-                  </span>
-                </div>
-              )}
-              
-              {currentQuestionDetail?.question && (
-                <div className="mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">生成的问题:</h3>
-                  <div className="p-3 bg-gray-50 rounded-lg text-gray-800">
-                    {currentQuestionDetail.question}
-                  </div>
-                </div>
-              )}
-              
-              {currentQuestionDetail?.content && (
-                <div className="mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">原始内容:</h3>
-                  <div className="p-3 bg-gray-50 rounded-lg text-gray-800 max-h-40 overflow-y-auto">
-                    {currentQuestionDetail.content}
-                  </div>
-                </div>
-              )}
-              
-              {currentQuestionDetail?.prompt && (
-                <div className="mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">使用的提示词:</h3>
-                  <div className="p-3 bg-gray-50 rounded-lg text-gray-800 max-h-40 overflow-y-auto">
-                    {currentQuestionDetail.prompt}
-                  </div>
-                </div>
-              )}
-              
-              {currentQuestionDetail?.metadata && (
-                <div className="mt-4 border-t pt-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">元数据:</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center">
-                      <span className="text-gray-600 mr-2">内容长度:</span>
-                      <span className="font-medium">{currentQuestionDetail.metadata.contentLength} 字符</span>
+                <Button
+                  onClick={handleGenerateQuestions}
+                  disabled={generating || validationErrors.length > 0 || !selectedProject || !selectedDataset || selectedSegments.length === 0}
+                  className="w-full"
+                  size="lg"
+                >
+                  {generating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      <FiPlay className="mr-2 h-4 w-4" />
+                      开始生成问题
+                    </>
+                  )}
+                </Button>
+
+                {generating && (
+                  <div className="space-y-3 p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>生成进度</span>
+                      <span>{progress.completed + progress.failed}/{progress.total}</span>
                     </div>
-                    <div className="flex items-center">
-                      <span className="text-gray-600 mr-2">问题长度:</span>
-                      <span className="font-medium">{currentQuestionDetail.metadata.questionLength} 字符</span>
+                    <Progress value={progress.percentage} className="w-full" />
+                    <div className="text-sm text-gray-600">
+                      {progress.current}
                     </div>
-                    <div className="flex items-center">
-                      <span className="text-gray-600 mr-2">提示词长度:</span>
-                      <span className="font-medium">{currentQuestionDetail.metadata.promptLength} 字符</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-gray-600 mr-2">创建时间:</span>
-                      <span className="font-medium">
-                        {currentQuestionDetail.metadata.createdAt && 
-                          new Date(currentQuestionDetail.metadata.createdAt).toLocaleString('zh-CN')}
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span className="flex items-center">
+                        <FiCheckCircle className="mr-1 h-3 w-3 text-green-500" />
+                        成功: {progress.completed}
+                      </span>
+                      <span className="flex items-center">
+                        <FiXCircle className="mr-1 h-3 w-3 text-red-500" />
+                        失败: {progress.failed}
                       </span>
                     </div>
                   </div>
+                )}
+
+                {generationSummary && (
+                  <div className="space-y-3 p-3 bg-green-50 rounded-lg">
+                    <div className="font-medium text-green-800">生成完成</div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex items-center">
+                        <FiCheckCircle className="mr-1 h-4 w-4 text-green-500" />
+                        成功: {generationSummary.successful}
+                      </div>
+                      <div className="flex items-center">
+                        <FiXCircle className="mr-1 h-4 w-4 text-red-500" />
+                        失败: {generationSummary.failed}
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm text-gray-600">
+                      总计生成 {generationSummary.questions.length} 个问题
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 生成结果区域 */}
+            <section className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-gray-900">生成结果</h3>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">筛选数据集:</label>
+                    <Select 
+                      value={resultDatasetFilter} 
+                      onValueChange={(value) => {
+                        setResultDatasetFilter(value);
+                        if (selectedProject) {
+                          fetchQuestions(selectedProject, 1, value);
+                          setCurrentPage(1);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="全部数据集" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">全部数据集</SelectItem>
+                        {datasets.map((dataset) => (
+                          <SelectItem key={dataset.id} value={dataset.id.toString()}>
+                            {dataset.name}
+                            {dataset.id.toString() === selectedDataset && " (当前)"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        if (selectedProject) {
+                          fetchQuestions(selectedProject, currentPage, resultDatasetFilter);
+                        }
+                      }}
+                      className="flex items-center"
+                    >
+                      <FiRefreshCw className="mr-1 h-3 w-3" />
+                      刷新
+                    </Button>
+                  </div>
+                  
+                  <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <FiDownload className="mr-2 h-4 w-4" />
+                    导出数据
+                  </button>
                 </div>
+              </div>
+              
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">加载中...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex-1 overflow-y-auto space-y-4 min-h-0 pr-2">
+                    {questions.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        暂无生成的问题
+                      </div>
+                    ) : (
+                      questions.map((question) => (
+                        <article
+                          key={question.id}
+                          className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="mb-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="text-sm text-gray-500">
+                                {getProjectName(question.projectId)} / {getDatasetName(question.datasetId)}
+                              </div>
+                              <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                                数据集: {getDatasetName(question.datasetId)}
+                              </div>
+                            </div>
+                            <div className="font-medium text-gray-900">
+                              {question.generatedQuestion}
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div className="text-xs text-gray-400">
+                              生成时间: {new Date(question.createdAt).toLocaleString('zh-CN')}
+                            </div>
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => handleViewQuestionDetail(question.id)}
+                                className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                              >
+                                <FiInfo className="inline mr-1 h-3 w-3" />
+                                详情
+                              </button>
+                            </div>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 flex-shrink-0">
+                      <div className="text-sm text-gray-600">
+                        共 {totalQuestions} 条记录，第 {currentPage} / {totalPages} 页
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage <= 1}
+                        >
+                          <FiChevronLeft className="h-4 w-4" />
+                          上一页
+                        </Button>
+                        
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={currentPage === pageNum ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handlePageChange(pageNum)}
+                                className="w-8 h-8 p-0"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage >= totalPages}
+                        >
+                          下一页
+                          <FiChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>关闭</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </section>
+          </main>
+        </div>
 
-      {/* 高级设置弹框 */}
-      {showAdvancedSettings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-4 w-96 max-w-[90vw]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">高级设置</h3>
-              <button
-                onClick={() => setShowAdvancedSettings(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <FiXCircle className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <Label>并发数: {concurrencyLimit[0]}</Label>
-                <Slider
-                  value={concurrencyLimit}
-                  onValueChange={setConcurrencyLimit}
-                  max={10}
-                  min={1}
-                  step={1}
-                  className="mt-2"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  并发数越高生成越快，但可能触发API限制
-                </p>
+        {/* 问题详情对话框 */}
+        <AlertDialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+          <AlertDialogContent className="max-w-3xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-xl">问题详情</AlertDialogTitle>
+              <AlertDialogDescription className="text-base text-gray-700">
+                {currentQuestionDetail?.datasetName && (
+                  <div className="mb-2">
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                      数据集: {currentQuestionDetail.datasetName}
+                    </span>
+                  </div>
+                )}
+                
+                {currentQuestionDetail?.question && (
+                  <div className="mb-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">生成的问题:</h3>
+                    <div className="p-3 bg-gray-50 rounded-lg text-gray-800">
+                      {currentQuestionDetail.question}
+                    </div>
+                  </div>
+                )}
+                
+                {currentQuestionDetail?.content && (
+                  <div className="mb-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">原始内容:</h3>
+                    <div className="p-3 bg-gray-50 rounded-lg text-gray-800 max-h-40 overflow-y-auto">
+                      {currentQuestionDetail.content}
+                    </div>
+                  </div>
+                )}
+                
+                {currentQuestionDetail?.prompt && (
+                  <div className="mb-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">使用的提示词:</h3>
+                    <div className="p-3 bg-gray-50 rounded-lg text-gray-800 max-h-40 overflow-y-auto">
+                      {currentQuestionDetail.prompt}
+                    </div>
+                  </div>
+                )}
+                
+                {currentQuestionDetail?.metadata && (
+                  <div className="mt-4 border-t pt-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">元数据:</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center">
+                        <span className="text-gray-600 mr-2">内容长度:</span>
+                        <span className="font-medium">{currentQuestionDetail.metadata.contentLength} 字符</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-gray-600 mr-2">问题长度:</span>
+                        <span className="font-medium">{currentQuestionDetail.metadata.questionLength} 字符</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-gray-600 mr-2">提示词长度:</span>
+                        <span className="font-medium">{currentQuestionDetail.metadata.promptLength} 字符</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-gray-600 mr-2">创建时间:</span>
+                        <span className="font-medium">
+                          {currentQuestionDetail.metadata.createdAt && 
+                            new Date(currentQuestionDetail.metadata.createdAt).toLocaleString('zh-CN')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>关闭</AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* 高级设置弹框 */}
+        {showAdvancedSettings && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-4 w-96 max-w-[90vw]">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">高级设置</h3>
+                <button
+                  onClick={() => setShowAdvancedSettings(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FiXCircle className="h-5 w-5" />
+                </button>
               </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="enableRetry"
-                  checked={enableRetry}
-                  onCheckedChange={(checked) => setEnableRetry(checked === true)}
-                />
-                <Label htmlFor="enableRetry">启用重试机制</Label>
-              </div>
-
-              {enableRetry && (
+              
+              <div className="space-y-4">
                 <div>
-                  <Label>最大重试次数: {maxRetries[0]}</Label>
+                  <Label>并发数: {concurrencyLimit[0]}</Label>
                   <Slider
-                    value={maxRetries}
-                    onValueChange={setMaxRetries}
-                    max={5}
+                    value={concurrencyLimit}
+                    onValueChange={setConcurrencyLimit}
+                    max={10}
                     min={1}
                     step={1}
                     className="mt-2"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    失败时自动重试，提高生成成功率
+                    并发数越高生成越快，但可能触发API限制
                   </p>
                 </div>
-              )}
-            </div>
 
-            <div className="flex justify-end mt-6">
-              <Button
-                onClick={() => setShowAdvancedSettings(false)}
-                className="px-4 py-2"
-              >
-                确定
-              </Button>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="enableRetry"
+                    checked={enableRetry}
+                    onCheckedChange={(checked) => setEnableRetry(checked === true)}
+                  />
+                  <Label htmlFor="enableRetry">启用重试机制</Label>
+                </div>
+
+                {enableRetry && (
+                  <div>
+                    <Label>最大重试次数: {maxRetries[0]}</Label>
+                    <Slider
+                      value={maxRetries}
+                      onValueChange={setMaxRetries}
+                      max={5}
+                      min={1}
+                      step={1}
+                      className="mt-2"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      失败时自动重试，提高生成成功率
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <Button
+                  onClick={() => setShowAdvancedSettings(false)}
+                  className="px-4 py-2"
+                >
+                  确定
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );

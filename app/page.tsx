@@ -37,7 +37,7 @@ export default function HomePage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="space-y-8 pl-1 pr-4 py-1">
-      {/* 欢迎区域 */}
+      {/* 页面头部 - 欢迎横幅区域 */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-white">
         <h1 className="text-3xl font-bold mb-2">欢迎使用指令数据集生成平台</h1>
         <p className="text-blue-100 text-lg">
@@ -59,8 +59,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* 数据统计卡片区域 - 显示项目、数据集、问题、答案的统计信息 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -142,8 +142,9 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* 最近项目 */}
+      {/* 主要内容区域 - 响应式网格布局 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        {/* 左侧 - 最近项目列表 */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900">最近项目</h2>
@@ -198,7 +199,7 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* 最近问题 */}
+        {/* 右侧 - 最近生成的问题列表 */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900">最近生成的问题</h2>
@@ -262,10 +263,10 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 快速操作 */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">快速操作</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 快速操作区域 - 提供常用功能的快捷入口 */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 md:p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 md:mb-6">快速操作</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Link
             href="/projects"
             className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group"
@@ -317,7 +318,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 使用提示 */}
+      {/* 页面底部 - 使用提示和帮助信息 */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
         <div className="flex items-start">
           <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">

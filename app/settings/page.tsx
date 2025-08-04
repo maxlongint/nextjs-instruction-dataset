@@ -331,14 +331,16 @@ export default function SettingsPage() {
 
   return (
     <>
+      {/* 系统设置页面容器 */}
       <div className="h-full overflow-y-auto">
-        <div className="space-y-6 pl-1 pr-4 py-1">
-          {/* 页面头部 */}
-          <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-6">
+          {/* 页面头部区域 */}
+          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">系统设置</h1>
               <p className="text-gray-600 mt-1">配置AI模型、数据库连接和应用参数</p>
             </div>
+            {/* 重置设置按钮 */}
             <button 
               onClick={handleResetSettings}
               disabled={resetting}
@@ -356,17 +358,21 @@ export default function SettingsPage() {
                 </>
               )}
             </button>
-          </div>
+          </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* AI模型配置 */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+          {/* 主内容区域 - 响应式网格布局 */}
+          <main className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+            {/* AI模型配置区域 */}
+            <section className="bg-white rounded-lg border border-gray-200 p-4">
+              {/* AI配置头部 */}
               <div className="flex items-center mb-4">
                 <FiSettings className="h-5 w-5 text-blue-600 mr-2" />
                 <h3 className="text-lg font-semibold text-gray-900">AI模型配置</h3>
               </div>
               
-              <div className="space-y-4">
+              {/* AI配置表单 */}
+              <form className="space-y-4">
+                {/* AI平台选择 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     AI平台 <span className="text-red-500">*</span>
@@ -391,6 +397,7 @@ export default function SettingsPage() {
                   )}
                 </div>
 
+                {/* API地址输入 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     API地址 <span className="text-red-500">*</span>
@@ -416,6 +423,7 @@ export default function SettingsPage() {
                   )}
                 </div>
 
+                {/* API密钥输入 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     API密钥 {aiConfig.platform && platformConfigs[aiConfig.platform]?.requiresKey && <span className="text-red-500">*</span>}
@@ -433,7 +441,11 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* 高级参数设置 */}
+                <fieldset className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <legend className="sr-only">高级参数设置</legend>
+                  
+                  {/* 最大令牌数 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       最大令牌数
@@ -448,6 +460,7 @@ export default function SettingsPage() {
                     />
                   </div>
 
+                  {/* 温度参数 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       温度参数
@@ -462,8 +475,9 @@ export default function SettingsPage() {
                       onChange={(e) => setAiConfig({ ...aiConfig, temperature: parseFloat(e.target.value) })}
                     />
                   </div>
-                </div>
+                </fieldset>
 
+                {/* 并发数设置 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     并发数
@@ -483,11 +497,13 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center space-x-3 pt-4">
+                {/* AI配置操作按钮组 */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-4">
                   <button 
+                    type="button"
                     onClick={handleSaveAIConfig}
                     disabled={saving || !aiConfig.platform || !aiConfig.apiUrl.trim()}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
                     {saving ? (
                       <>
@@ -503,25 +519,29 @@ export default function SettingsPage() {
                   </button>
                   
                   <button 
+                    type="button"
                     onClick={handleTestAIConnection}
                     disabled={!aiConfig.platform || !aiConfig.apiUrl.trim() || (platformConfigs[aiConfig.platform]?.requiresKey && !aiConfig.apiKey.trim())}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                    className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
                     <FiGlobe className="mr-2 h-4 w-4" />
                     测试连接
                   </button>
                 </div>
-              </div>
-            </div>
+              </form>
+            </section>
 
-            {/* 应用设置 */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            {/* 应用设置区域 */}
+            <section className="bg-white rounded-lg border border-gray-200 p-4">
+              {/* 应用设置头部 */}
               <div className="flex items-center mb-4">
                 <FiSettings className="h-5 w-5 text-green-600 mr-2" />
                 <h3 className="text-lg font-semibold text-gray-900">应用设置</h3>
               </div>
               
-              <div className="space-y-4">
+              {/* 应用设置表单 */}
+              <form className="space-y-4">
+                {/* 界面主题选择 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     界面主题
@@ -538,6 +558,7 @@ export default function SettingsPage() {
                   </Select>
                 </div>
 
+                {/* 界面语言选择 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     界面语言
@@ -554,6 +575,7 @@ export default function SettingsPage() {
                   </Select>
                 </div>
 
+                {/* 自动保存选项 */}
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -567,11 +589,13 @@ export default function SettingsPage() {
                   </label>
                 </div>
 
+                {/* 应用设置保存按钮 */}
                 <div className="pt-4">
                   <button 
+                    type="button"
                     onClick={handleSaveAppConfig}
                     disabled={saving}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                    className="flex items-center justify-center w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
                     {saving ? (
                       <>
@@ -586,76 +610,82 @@ export default function SettingsPage() {
                     )}
                   </button>
                 </div>
-              </div>
-            </div>
+              </form>
+            </section>
 
-            {/* 数据库状态 */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            {/* 数据库状态区域 */}
+            <section className="bg-white rounded-lg border border-gray-200 p-4">
+              {/* 数据库状态头部 */}
               <div className="flex items-center mb-4">
                 <FiDatabase className="h-5 w-5 text-purple-600 mr-2" />
                 <h3 className="text-lg font-semibold text-gray-900">数据库状态</h3>
               </div>
               
-              <div className="space-y-4">
+              {/* 数据库信息列表 */}
+              <dl className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">数据库类型</span>
-                  <span className="text-sm font-medium text-gray-900">SQLite</span>
+                  <dt className="text-sm text-gray-600">数据库类型</dt>
+                  <dd className="text-sm font-medium text-gray-900">SQLite</dd>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">连接状态</span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <dt className="text-sm text-gray-600">连接状态</dt>
+                  <dd className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                     已连接
-                  </span>
+                  </dd>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">数据库文件</span>
-                  <span className="text-sm font-medium text-gray-900">data/database.sqlite</span>
+                  <dt className="text-sm text-gray-600">数据库文件</dt>
+                  <dd className="text-sm font-medium text-gray-900">data/database.sqlite</dd>
                 </div>
+              </dl>
 
-                <div className="pt-4 space-y-2">
-                  <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    备份数据库
-                  </button>
-                  <button className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-                    恢复数据库
-                  </button>
-                </div>
+              {/* 数据库操作按钮组 */}
+              <div className="pt-4 space-y-2">
+                <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  备份数据库
+                </button>
+                <button className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                  恢复数据库
+                </button>
               </div>
-            </div>
+            </section>
 
-            {/* 系统信息 */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            {/* 系统信息区域 */}
+            <section className="bg-white rounded-lg border border-gray-200 p-4">
+              {/* 系统信息头部 */}
               <div className="flex items-center mb-4">
                 <FiGlobe className="h-5 w-5 text-indigo-600 mr-2" />
                 <h3 className="text-lg font-semibold text-gray-900">系统信息</h3>
               </div>
               
-              <div className="space-y-4">
+              {/* 系统信息列表 */}
+              <dl className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">应用版本</span>
-                  <span className="text-sm font-medium text-gray-900">v1.0.0</span>
+                  <dt className="text-sm text-gray-600">应用版本</dt>
+                  <dd className="text-sm font-medium text-gray-900">v1.0.0</dd>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Node.js版本</span>
-                  <span className="text-sm font-medium text-gray-900">N/A</span>
+                  <dt className="text-sm text-gray-600">Node.js版本</dt>
+                  <dd className="text-sm font-medium text-gray-900">N/A</dd>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">运行环境</span>
-                  <span className="text-sm font-medium text-gray-900">开发模式</span>
+                  <dt className="text-sm text-gray-600">运行环境</dt>
+                  <dd className="text-sm font-medium text-gray-900">开发模式</dd>
                 </div>
+              </dl>
 
-                <div className="pt-4">
-                  <button className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-                    检查更新
-                  </button>
-                </div>
+              {/* 系统操作按钮 */}
+              <div className="pt-4">
+                <button className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                  检查更新
+                </button>
               </div>
-            </div>
-          </div>
+            </section>
+          </main>
         </div>
       </div>
 

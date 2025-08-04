@@ -474,65 +474,88 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* 右侧：分段预览和选择 */}
-        <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">数据集分段</h2>
-            {selectedDataset && (
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={handleResegment}
-                  className="flex items-center px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <FiRefreshCw className="mr-2 h-4 w-4" />
-                  重新分段
-                </button>
+        <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-50 to-white border-b border-gray-200 px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center">
+                <div className="h-8 w-1 bg-blue-600 rounded-full mr-3"></div>
+                <h2 className="text-lg font-semibold text-gray-900">数据集分段</h2>
+                {selectedDataset && (
+                  <span className="ml-3 inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                    {selectedDataset.name}
+                  </span>
+                )}
               </div>
-            )}
+              {selectedDataset && (
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={handleResegment}
+                    className="flex items-center px-3 py-2 text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <FiRefreshCw className="mr-2 h-4 w-4" />
+                    重新分段
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
+          <div className="p-6">
 
           {!selectedDataset ? (
-            <div className="text-center py-12">
-              <FiFile className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg mb-2">请选择一个数据集</p>
-              <p className="text-gray-400">选择左侧的数据集来查看和管理分段内容</p>
+            <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-500 mb-4">
+                <FiFile className="h-8 w-8" />
+              </div>
+              <p className="text-gray-700 text-lg font-medium mb-2">请选择一个数据集</p>
+              <p className="text-gray-500 max-w-md mx-auto">从左侧列表中选择一个数据集，查看和管理其分段内容</p>
             </div>
           ) : (
             <>
               {/* 搜索和操作栏 */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="搜索分段内容..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-                    />
-                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  </div>
-                  <button
-                    onClick={handleSearch}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    搜索
-                  </button>
-                </div>
-                
-                {showSegments && segments.length > 0 && (
-                  <div className="flex items-center space-x-3">
-                    <span className="text-sm text-gray-600">
-                      已选择 {selectedSegments.length} / {segments.length} 个分段
-                    </span>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="relative w-full sm:w-64">
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <FiSearch className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="搜索分段内容..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                        className="pl-10 pr-4 py-2 border border-gray-300 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+                      />
+                    </div>
                     <button
-                      onClick={handleSelectAllSegments}
-                      className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                      onClick={handleSearch}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
                     >
-                      {selectedSegments.length === segments.length ? '取消全选' : '全选'}
+                      <span className="flex items-center justify-center">
+                        <FiSearch className="mr-2 h-4 w-4" />
+                        搜索
+                      </span>
                     </button>
                   </div>
-                )}
+                  
+                  {showSegments && segments.length > 0 && (
+                    <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg border border-gray-200">
+                      <div className="flex items-center">
+                        <div className="h-2 w-2 rounded-full bg-blue-500 mr-2"></div>
+                        <span className="text-sm font-medium text-gray-700">
+                          已选择 <span className="text-blue-600 font-semibold">{selectedSegments.length}</span> / {segments.length} 个分段
+                        </span>
+                      </div>
+                      <button
+                        onClick={handleSelectAllSegments}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors hover:underline"
+                      >
+                        {selectedSegments.length === segments.length ? '取消全选' : '全选'}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* 分段列表 */}
@@ -543,31 +566,65 @@ export default function ProjectDetailPage() {
                 </div>
               ) : showSegments && segments.length > 0 ? (
                 <>
-                  <div className="space-y-4 mb-6">
+                  <div className="grid grid-cols-1 gap-4 mb-6">
                     {segments.map((segment) => (
                       <div
                         key={segment.id}
-                        className={`border border-gray-200 rounded-lg p-4 transition-colors ${
+                        className={`group border transition-all duration-200 rounded-xl shadow-sm hover:shadow-md ${
                           selectedSegments.includes(segment.id)
-                            ? 'bg-blue-50 border-blue-200'
-                            : 'hover:bg-gray-50'
+                            ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200 ring-opacity-50'
+                            : 'border-gray-200 hover:border-blue-200'
                         }`}
                       >
-                        <div className="flex items-start space-x-3">
-                          <Checkbox
-                            id={`segment-${segment.id}`}
-                            checked={selectedSegments.includes(segment.id)}
-                            onCheckedChange={() => handleSegmentSelect(segment.id)}
-                            className="mt-1"
-                          />
-                          <div className="flex-1">
-                            <Label
-                              htmlFor={`segment-${segment.id}`}
-                              className="text-sm font-medium text-gray-700 cursor-pointer"
-                            >
-                              {segment.segmentId}
-                            </Label>
-                            <div className="mt-2 text-sm text-gray-900 whitespace-pre-wrap">
+                        <div className="flex flex-col">
+                          {/* 分段标题栏 */}
+                          <div className={`flex items-center justify-between px-4 py-3 border-b ${
+                            selectedSegments.includes(segment.id) ? 'border-blue-200 bg-blue-100/50' : 'border-gray-100'
+                          }`}>
+                            <div className="flex items-center space-x-3">
+                              <Checkbox
+                                id={`segment-${segment.id}`}
+                                checked={selectedSegments.includes(segment.id)}
+                                onCheckedChange={() => handleSegmentSelect(segment.id)}
+                                className={`h-4 w-4 ${selectedSegments.includes(segment.id) ? 'text-blue-600' : 'text-gray-400'}`}
+                              />
+                              <Label
+                                htmlFor={`segment-${segment.id}`}
+                                className={`text-sm font-medium cursor-pointer ${
+                                  selectedSegments.includes(segment.id) ? 'text-blue-700' : 'text-gray-700'
+                                }`}
+                              >
+                                <span className="flex items-center">
+                                  <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 mr-2">
+                                    {segment.segmentId}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {segment.content.length} 字符
+                                  </span>
+                                </span>
+                              </Label>
+                            </div>
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleSegmentSelect(segment.id)}
+                                className="p-1 rounded-full hover:bg-blue-100 text-gray-400 hover:text-blue-600"
+                              >
+                                {selectedSegments.includes(segment.id) ? (
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                ) : (
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {/* 分段内容 */}
+                          <div className="p-4">
+                            <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
                               {segment.content}
                             </div>
                           </div>
@@ -578,28 +635,46 @@ export default function ProjectDetailPage() {
 
                   {/* 分页 */}
                   {totalPages > 1 && (
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-600">
-                        显示 {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalSegments)} 
-                        ，共 {totalSegments} 个分段
+                    <div className="mt-6 bg-white border border-gray-200 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-sm font-medium text-gray-700 bg-gray-50 px-3 py-1.5 rounded-md">
+                        显示 <span className="text-blue-600 font-semibold">{((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalSegments)}</span> 
+                        ，共 <span className="text-blue-600 font-semibold">{totalSegments}</span> 个分段
                       </div>
                       <div className="flex items-center space-x-2">
                         <button
+                          onClick={() => handlePageChange(1)}
+                          disabled={currentPage <= 1}
+                          className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <button
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage <= 1}
-                          className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <FiChevronLeft className="h-4 w-4" />
                         </button>
-                        <span className="text-sm text-gray-600">
+                        <span className="px-3 py-1 bg-blue-50 text-blue-700 font-medium rounded-md border border-blue-200">
                           {currentPage} / {totalPages}
                         </span>
                         <button
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={currentPage >= totalPages}
-                          className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <FiChevronRight className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handlePageChange(totalPages)}
+                          disabled={currentPage >= totalPages}
+                          className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                          </svg>
                         </button>
                       </div>
                     </div>
@@ -627,6 +702,7 @@ export default function ProjectDetailPage() {
               )}
             </>
           )}
+          </div>
         </div>
       </div>
 
@@ -713,4 +789,3 @@ export default function ProjectDetailPage() {
     </div>
   );
 }
-

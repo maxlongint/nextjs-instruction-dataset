@@ -167,7 +167,7 @@ export default function ProjectsPage() {
         ) : (
           <>
             {/* 项目卡片网格 */}
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <section className="grid grid-cols-1 2xl:grid-cols-3 lg:grid-cols-2 gap-6">
               {projects.map((project) => (
                 <article
                   key={project.id}

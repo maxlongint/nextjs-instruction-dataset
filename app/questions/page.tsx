@@ -747,8 +747,7 @@ export default function QuestionsPage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="flex flex-col gap-6">
+    <div className="h-full p-6 flex flex-col overflow-hidden">
         {/* 页面头部区域 */}
         <header className="flex items-center justify-between">
           <div>
@@ -797,9 +796,9 @@ export default function QuestionsPage() {
         </header>
 
         {/* 主内容区域 - 响应式布局：移动端垂直堆叠，桌面端左右分栏 */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 flex-1 min-h-0">
+        <div className="mt-6 flex-1 flex flex-col 2xl:flex-row overflow-hidden">
           {/* 左侧面板：数据集选择和分段选择 */}
-          <aside className="flex flex-col gap-4 lg:gap-6 w-full lg:w-1/2 h-full">
+          <aside className="flex flex-col w-1/2 h-full overflow-hidden">
             {/* 数据集选择区域 */}
             <section className="bg-white rounded-lg border border-gray-200 p-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">数据集选择</h3>
@@ -862,7 +861,7 @@ export default function QuestionsPage() {
 
             {/* 分段选择区域 */}
             {showSegments && (
-              <section className="bg-white rounded-lg border border-gray-200 p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+              <section className="mt-6 flex-1 bg-white rounded-lg border border-gray-200 p-4 flex flex-col min-h-0 overflow-hidden">
                 {/* 分段选择头部 */}
                 <div className="flex items-center justify-between mb-4 flex-shrink-0">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -889,7 +888,7 @@ export default function QuestionsPage() {
                 </div>
                 
                 {/* 分段列表 */}
-                <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-2">
+                <div className="flex-1 overflow-y-auto space-y-4">
                   {segments.map((segment, index) => (
                     <article
                       key={index}
@@ -965,7 +964,7 @@ export default function QuestionsPage() {
           </aside>
 
           {/* 右侧面板：生成配置和结果 */}
-          <main className="flex flex-col gap-4 lg:gap-6 w-full lg:w-1/2 h-full">
+          <main className="flex-1 flex flex-col ml-6 h-full">
             {/* 生成配置区域 */}
             <Card>
               <CardHeader>
@@ -1076,7 +1075,7 @@ export default function QuestionsPage() {
             </Card>
 
             {/* 生成结果区域 */}
-            <section className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
+            <section className="mt-6 bg-white rounded-lg border border-gray-200 p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="flex items-center justify-between mb-4 flex-shrink-0">
                 <h3 className="text-lg font-semibold text-gray-900">生成结果</h3>
                 <div className="flex items-center gap-4">
@@ -1381,7 +1380,6 @@ export default function QuestionsPage() {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

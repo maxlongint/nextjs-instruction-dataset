@@ -40,9 +40,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           
           {/* 右侧主内容区域 */}
           <main className="flex-1 bg-white overflow-hidden">
-            <div className="h-full p-4 md:p-6 overflow-y-auto">
               {children}
-            </div>
           </main>
         </div>
         

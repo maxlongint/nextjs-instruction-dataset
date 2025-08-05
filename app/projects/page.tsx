@@ -140,7 +140,7 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full p-6 overflow-hidden overflow-y-auto">
       <div className="space-y-6">
         {/* 页面头部区域 */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

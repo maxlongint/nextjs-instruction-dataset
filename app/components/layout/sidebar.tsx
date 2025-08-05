@@ -29,7 +29,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
     // 左侧导航边栏
     <aside className="flex h-full w-64 flex-col bg-gray-50 border-r border-gray-200">
       {/* 主导航菜单 */}
-      <nav className="flex-1 p-4 pt-8">
+      <nav className="flex-1 p-4">
         <div className="space-y-2">
           {navigation.map((item) => {
             // 更精确的路径匹配逻辑

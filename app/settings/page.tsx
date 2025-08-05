@@ -332,7 +332,7 @@ export default function SettingsPage() {
   return (
     <>
       {/* 系统设置页面容器 */}
-      <div className="h-full overflow-y-auto">
+      <div className="h-full p-6 overflow-y-auto">
         <div className="flex flex-col gap-6">
           {/* 页面头部区域 */}
           <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

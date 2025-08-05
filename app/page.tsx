@@ -35,8 +35,8 @@ export default function HomePage() {
     .slice(0, 5);
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="space-y-8 pl-1 pr-4 py-1">
+    <div className="h-full p-6 overflow-hidden overflow-y-auto">
+      <div className="space-y-8 pl-1 py-1">
       {/* 页面头部 - 欢迎横幅区域 */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-white">
         <h1 className="text-3xl font-bold mb-2">欢迎使用指令数据集生成平台</h1>
@@ -143,7 +143,7 @@ export default function HomePage() {
       </div>
 
       {/* 主要内容区域 - 响应式网格布局 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 ">
         {/* 左侧 - 最近项目列表 */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">

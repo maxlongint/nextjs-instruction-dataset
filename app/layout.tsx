@@ -30,7 +30,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {/* 根容器 - 包含所有页面内容 */}
-        <div className="min-h-screen flex flex-col bg-gray-50">
+        <div className="h-full flex flex-col bg-gray-50">
           <MainLayout>
             {children}
           </MainLayout>

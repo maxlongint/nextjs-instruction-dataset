@@ -252,8 +252,7 @@ export default function AnswersPage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="flex flex-col gap-6">
+    <div className="h-full p-6 overflow-hidden flex flex-col gap-6">
         {/* 页面头部区域 */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -286,9 +285,7 @@ export default function AnswersPage() {
           <aside className="flex flex-col w-full lg:w-1/3">
             {/* 项目和数据集选择区域 */}
             <section className="bg-white rounded-lg border border-gray-200 p-3 md:p-4 mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">项目和数据集选择</h3>
-              <p className="text-sm text-gray-600 mb-4">选择要处理的项目和数据集</p>
-              
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">项目和数据集选择</h3>              
               <div className="space-y-4">
                 {/* 项目选择 */}
                 <div>
@@ -613,7 +610,6 @@ export default function AnswersPage() {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }

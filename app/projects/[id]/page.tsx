@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FiUpload, FiFile, FiEdit, FiTrash2, FiRefreshCw, FiChevronLeft, FiChevronRight, FiSearch, FiZap } from 'react-icons/fi';
 import { Progress } from '@/components/ui/progress';
@@ -115,6 +115,17 @@ export default function ProjectDetailPage() {
   ];
 
 
+  // 获取数据集列表
+  const fetchDatasets = React.useCallback(async () => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const datasets = datasetService.getAll(parseInt(projectId));
+      setProjectDatasets(datasets);
+    } catch (error) {
+      console.error('获取数据集列表失败:', error);
+    }
+  }, [projectId]);
+
   useEffect(() => {
     if (projectId && projects.length > 0) {
       const foundProject = projects.find(p => p.id.toString() === projectId);
@@ -125,18 +136,7 @@ export default function ProjectDetailPage() {
         router.push('/projects');
       }
     }
-  }, [projectId, projects, router]);
-
-  // 获取数据集列表
-  const fetchDatasets = async () => {
-    try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const datasets = datasetService.getAll(parseInt(projectId));
-      setProjectDatasets(datasets);
-    } catch (error) {
-      console.error('获取数据集列表失败:', error);
-    }
-  };
+  }, [projectId, projects, router, fetchDatasets]);
 
   // 获取分段列表
   const fetchSegments = async (dataset: Dataset, page: number = 1) => {
@@ -1048,9 +1048,9 @@ export default function ProjectDetailPage() {
                 <SelectContent className="w-full">
                   {modelOptions.map((model) => (
                     <SelectItem key={model.value} value={model.value} className="py-2">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{model.label}</span>
-                        <span className="text-xs text-gray-500 leading-tight">{model.description}</span>
+                      <div className="flex flex-col text-left">
+                        <span className="font-medium text-left">{model.label}</span>
+                        <span className="text-xs text-gray-500 leading-tight text-left">{model.description}</span>
                       </div>
                     </SelectItem>
                   ))}

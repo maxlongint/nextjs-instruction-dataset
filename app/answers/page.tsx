@@ -348,9 +348,9 @@ export default function AnswersPage() {
                 <SelectContent className="w-64">
                   {availableModels.map((model) => (
                     <SelectItem key={model.value} value={model.value}>
-                      <div className="flex flex-col py-1">
-                        <span className="font-medium">{model.label}</span>
-                        <span className="text-xs text-gray-500 leading-tight">{model.description}</span>
+                      <div className="flex flex-col py-1 text-left">
+                        <span className="font-medium text-left">{model.label}</span>
+                        <span className="text-xs text-gray-500 leading-tight text-left">{model.description}</span>
                       </div>
                     </SelectItem>
                   ))}

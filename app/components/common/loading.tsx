@@ -48,8 +48,7 @@ export function LoadingButton({
   loading: boolean; 
   children: React.ReactNode;
   className?: string;
-  [key: string]: any;
-}) {
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button 
       className={`flex items-center justify-center ${className}`}

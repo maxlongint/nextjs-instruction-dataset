@@ -845,7 +845,7 @@ export const dataUtils = {
   },
 
   // 搜索过滤
-  search: <T extends Record<string, any>>(
+  search: <T extends Record<string, unknown>>(
     data: T[], 
     searchTerm: string, 
     searchFields: (keyof T)[]
@@ -870,7 +870,7 @@ export const dataUtils = {
   },
 
   // 排序
-  sort: <T extends Record<string, any>>(
+  sort: <T extends Record<string, unknown>>(
     data: T[], 
     sortField: keyof T, 
     sortOrder: 'asc' | 'desc' = 'asc'

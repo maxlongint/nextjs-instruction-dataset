@@ -122,29 +122,42 @@ export function useErrorHandler() {
 }
 
 // 通用错误处理函数
-export const handleApiError = (error: any): string => {
-  if (error?.response?.data?.error) {
-    return error.response.data.error;
+export const handleApiError = (error: unknown): string => {
+  if (typeof error === 'string') {
+    return error;
   }
   
-  if (error?.message) {
+  if (error instanceof Error) {
     return error.message;
   }
   
-  if (typeof error === 'string') {
-    return error;
+  const errorObj = error as Record<string, unknown>;
+  if (errorObj?.response?.data?.error) {
+    return String(errorObj.response.data.error);
+  }
+  
+  if (errorObj?.message) {
+    return String(errorObj.message);
   }
   
   return '发生了未知错误，请稍后重试';
 };
 
 // 网络错误检测
-export const isNetworkError = (error: any): boolean => {
+export const isNetworkError = (error: unknown): boolean => {
+  if (!navigator.onLine) {
+    return true;
+  }
+  
+  if (error instanceof Error) {
+    return error.message.includes('fetch') || error.message.includes('network');
+  }
+  
+  const errorObj = error as Record<string, unknown>;
   return (
-    error?.code === 'NETWORK_ERROR' ||
-    error?.message?.includes('fetch') ||
-    error?.message?.includes('network') ||
-    !navigator.onLine
+    errorObj?.code === 'NETWORK_ERROR' ||
+    (typeof errorObj?.message === 'string' && 
+     (errorObj.message.includes('fetch') || errorObj.message.includes('network')))
   );
 };
 
@@ -160,12 +173,13 @@ export enum ApiErrorType {
 }
 
 // 错误分类函数
-export const classifyError = (error: any): ApiErrorType => {
+export const classifyError = (error: unknown): ApiErrorType => {
   if (isNetworkError(error)) {
     return ApiErrorType.NETWORK;
   }
   
-  const status = error?.response?.status || error?.status;
+  const errorObj = error as Record<string, unknown>;
+  const status = Number(errorObj?.response?.status || errorObj?.status);
   
   switch (status) {
     case 400:

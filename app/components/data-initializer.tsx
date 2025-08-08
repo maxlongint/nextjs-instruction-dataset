@@ -65,7 +65,7 @@ export default function DataInitializer({ children }: DataInitializerProps) {
   useEffect(() => {
     if (process.env.NODE_ENV === 'development' && isInitialized) {
       // 在控制台提供数据管理工具
-      (window as any).dataTools = {
+      (window as Record<string, any>).dataTools = {
         // 切换数据场景
         setScenario: (scenarioName: string, options?: { itemCount?: number }) => {
           ScenarioManager.setScenario(scenarioName, options);
@@ -178,7 +178,14 @@ export default function DataInitializer({ children }: DataInitializerProps) {
 // 数据状态指示器组件（开发环境使用）
 export function DataStatusIndicator() {
   const [currentScenario, setCurrentScenario] = useState<string>('');
-  const [dataStats, setDataStats] = useState<any>(null);
+  const [dataStats, setDataStats] = useState<{
+    projects: number;
+    datasets: number;
+    questions: number;
+    answers: number;
+    users: number;
+    tasks: number;
+  } | null>(null);
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {

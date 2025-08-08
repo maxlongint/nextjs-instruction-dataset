@@ -99,6 +99,58 @@ export default function QuestionsPage() {
   const fetchProjects = async () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // 确保数据初始化
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('app-store');
+        if (!stored) {
+          // 初始化基础数据结构
+          const initialData = {
+            state: {
+              projects: [
+                {
+                  id: 1,
+                  name: "示例项目1",
+                  description: "这是一个示例项目",
+                  status: "active",
+                  priority: "medium",
+                  category: "示例",
+                  tags: [],
+                  ownerId: 1,
+                  memberIds: [],
+                  progress: 0,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                }
+              ],
+              datasets: [
+                {
+                  id: 1,
+                  projectId: 1,
+                  name: "示例数据集1",
+                  description: "这是一个示例数据集",
+                  fileName: "example.txt",
+                  filePath: "/example.txt",
+                  fileSize: 1024,
+                  type: "text",
+                  content: "这是第一段内容。\n\n这是第二段内容。\n\n这是第三段内容。",
+                  segmentDelimiter: "\n\n",
+                  status: "ready",
+                  tags: [],
+                  isPublic: false,
+                  downloadCount: 0,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                }
+              ],
+              questions: [],
+              answers: []
+            }
+          };
+          localStorage.setItem('app-store', JSON.stringify(initialData));
+        }
+      }
+      
       const projects = projectService.getAll();
       setProjects(projects);
     } catch (error) {
@@ -258,17 +310,21 @@ export default function QuestionsPage() {
             const processedPrompt = prompt.replace('{content}', segment.content);
             
             // 创建新问题
-            const newQuestion = questionService.create({
+            questionService.create({
               uid: `q_${Date.now()}`,
               projectId: parseInt(selectedProject),
               datasetId: parseInt(selectedDataset),
-              segmentId: segment.id,
+              segmentId: segment.id.toString(),
               generatedQuestion: generatedQuestion,
               prompt: processedPrompt,
-              type: 'generated',
-              status: 'approved',
+              content: segment.content,
+              type: 'short_answer',
+              status: 'generated',
+              difficulty: 'medium',
+              category: 'generated',
+              tags: [`AI模型: ${modelOptions.find(m => m.value === selectedModel)?.label || selectedModel}`],
+              isPublic: false,
               usageCount: 0,
-              sources: [`AI模型: ${modelOptions.find(m => m.value === selectedModel)?.label || selectedModel}`],
               updatedAt: new Date().toISOString()
             });
             
@@ -377,9 +433,9 @@ export default function QuestionsPage() {
                 <SelectContent className="w-64">
                   {modelOptions.map((model) => (
                     <SelectItem key={model.value} value={model.value} className="py-1">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{model.label}</span>
-                        <span className="text-xs text-gray-500 leading-tight">{model.description}</span>
+                      <div className="flex flex-col text-left">
+                        <span className="font-medium text-left">{model.label}</span>
+                        <span className="text-xs text-gray-500 leading-tight text-left">{model.description}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -609,9 +665,9 @@ export default function QuestionsPage() {
                                   已生成
                                 </Badge>
                                 {/* 显示使用的AI模型 */}
-                                {question.sources && question.sources.length > 0 && (
+                                {question.tags && question.tags.length > 0 && question.tags[0].includes('AI模型') && (
                                   <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                    {question.sources[0]}
+                                    {question.tags[0]}
                                   </Badge>
                                 )}
                               </div>
@@ -636,7 +692,7 @@ export default function QuestionsPage() {
                           <footer className="border-t bg-gray-50 py-2 px-4 text-xs text-gray-500">
                             生成时间: {new Date(question.createdAt).toLocaleString('zh-CN')}
                             <span className="ml-4">
-                              来自分段{question.segmentId + 1}
+                              来自分段{parseInt(question.segmentId || '0') + 1}
                             </span>
                           </footer>
                         </article>

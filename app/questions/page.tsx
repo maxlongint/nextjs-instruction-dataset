@@ -25,6 +25,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { datasetService, questionService, templateService, projectService } from '../lib/data-service';
 import { Project, Dataset, Question, Segment } from '../types';
 
@@ -1312,73 +1321,82 @@ export default function QuestionsPage() {
         </AlertDialog>
 
         {/* 高级设置弹框 */}
-        {showAdvancedSettings && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-4 w-96 max-w-[90vw]">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">高级设置</h3>
-                <button
-                  onClick={() => setShowAdvancedSettings(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <FiXCircle className="h-5 w-5" />
-                </button>
+        <Dialog open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>高级设置</DialogTitle>
+              <DialogDescription>
+                配置问题生成的高级参数
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="prompt-template">提示词模板</Label>
+                <Textarea
+                  id="prompt-template"
+                  className="mt-2 min-h-[120px] resize-none"
+                  placeholder="请输入问题生成的提示词模板..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  支持使用 <code className="px-1 py-0.5 bg-gray-100 rounded">{'{content}'}</code> 作为内容占位符
+                </p>
               </div>
-              
-              <div className="space-y-4">
+
+              <div>
+                <Label>并发数: {concurrencyLimit[0]}</Label>
+                <Slider
+                  value={concurrencyLimit}
+                  onValueChange={setConcurrencyLimit}
+                  max={10}
+                  min={1}
+                  step={1}
+                  className="mt-2"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  并发数越高生成越快，但可能触发API限制
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="enableRetry"
+                  checked={enableRetry}
+                  onCheckedChange={(checked) => setEnableRetry(checked === true)}
+                />
+                <Label htmlFor="enableRetry">启用重试机制</Label>
+              </div>
+
+              {enableRetry && (
                 <div>
-                  <Label>并发数: {concurrencyLimit[0]}</Label>
+                  <Label>最大重试次数: {maxRetries[0]}</Label>
                   <Slider
-                    value={concurrencyLimit}
-                    onValueChange={setConcurrencyLimit}
-                    max={10}
+                    value={maxRetries}
+                    onValueChange={setMaxRetries}
+                    max={5}
                     min={1}
                     step={1}
                     className="mt-2"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    并发数越高生成越快，但可能触发API限制
+                    失败时自动重试，提高生成成功率
                   </p>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="enableRetry"
-                    checked={enableRetry}
-                    onCheckedChange={(checked) => setEnableRetry(checked === true)}
-                  />
-                  <Label htmlFor="enableRetry">启用重试机制</Label>
-                </div>
-
-                {enableRetry && (
-                  <div>
-                    <Label>最大重试次数: {maxRetries[0]}</Label>
-                    <Slider
-                      value={maxRetries}
-                      onValueChange={setMaxRetries}
-                      max={5}
-                      min={1}
-                      step={1}
-                      className="mt-2"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      失败时自动重试，提高生成成功率
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end mt-6">
-                <Button
-                  onClick={() => setShowAdvancedSettings(false)}
-                  className="px-4 py-2"
-                >
-                  确定
-                </Button>
-              </div>
+              )}
             </div>
-          </div>
-        )}
+
+            <DialogFooter>
+              <Button
+                onClick={() => setShowAdvancedSettings(false)}
+                className="w-full"
+              >
+                确定
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }

@@ -13,6 +13,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { datasetService, questionService, answerService, projectService } from '../lib/data-service';
 import { Project, Dataset, Question, Answer } from '../types';
 
@@ -555,60 +565,47 @@ export default function AnswersPage() {
         </div>
 
         {/* 提示词配置弹框 */}
-        {showPromptModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="w-full max-w-2xl mx-4 bg-white rounded-lg shadow-lg">
-              {/* 弹框头部 */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">答案提示词配置</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowPromptModal(false)}
-                  className="h-8 w-8 p-0 rounded-full"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </Button>
+        <Dialog open={showPromptModal} onOpenChange={setShowPromptModal}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>答案提示词配置</DialogTitle>
+              <DialogDescription>
+                配置生成答案时使用的提示词模板
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="prompt-template">提示词模板</Label>
+                <Textarea
+                  id="prompt-template"
+                  className="mt-2 min-h-[160px] resize-none"
+                  placeholder="请输入答案生成的提示词模板..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                />
               </div>
-              
-              {/* 弹框内容 */}
-              <div className="p-4">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">提示词模板</label>
-                    <textarea
-                      className="w-full h-40 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                      placeholder="请输入答案生成的提示词模板..."
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                    />
-                  </div>
-                  <div className="text-sm text-gray-500 flex items-center">
-                    <FiInfo className="mr-2 h-4 w-4" />
-                    支持使用 <code className="mx-1 px-1 py-0.5 bg-gray-100 rounded">{'{question}'}</code> 作为问题占位符
-                  </div>
-                </div>
-              </div>
-              
-              {/* 弹框底部 */}
-              <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPromptModal(false)}
-                >
-                  取消
-                </Button>
-                <Button
-                  onClick={() => setShowPromptModal(false)}
-                >
-                  保存
-                </Button>
+              <div className="text-sm text-gray-500 flex items-center">
+                <FiInfo className="mr-2 h-4 w-4" />
+                支持使用 <code className="mx-1 px-1 py-0.5 bg-gray-100 rounded">{'{question}'}</code> 作为问题占位符
               </div>
             </div>
-          </div>
-        )}
+            
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowPromptModal(false)}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={() => setShowPromptModal(false)}
+              >
+                保存
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
   );
 }

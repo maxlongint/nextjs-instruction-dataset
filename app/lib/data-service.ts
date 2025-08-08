@@ -26,18 +26,18 @@ import {
 // 项目服务
 export const projectService = {
   getAll: (): Project[] => {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') return mockProjects;
     
     try {
       const stored = localStorage.getItem('app-store');
       if (stored) {
         const data = JSON.parse(stored);
-        return data.state?.projects || [];
+        return data.state?.projects || mockProjects;
       }
     } catch (error) {
       console.error('获取项目数据失败:', error);
     }
-    return [];
+    return mockProjects;
   },
 
   getById: (id: number): Project | null => {
@@ -130,13 +130,13 @@ export const projectService = {
 // 数据集服务
 export const datasetService = {
   getAll: (projectId?: number): Dataset[] => {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') return mockDatasets;
     
     try {
       const stored = localStorage.getItem('app-store');
       if (stored) {
         const data = JSON.parse(stored);
-        let datasets = data.state?.datasets || [];
+        let datasets = data.state?.datasets || mockDatasets;
         
         if (projectId) {
           datasets = datasets.filter((d: Dataset) => d.projectId === projectId);
@@ -147,7 +147,7 @@ export const datasetService = {
     } catch (error) {
       console.error('获取数据集数据失败:', error);
     }
-    return [];
+    return mockDatasets;
   },
 
   getById: (id: number): Dataset | null => {
@@ -237,13 +237,13 @@ export const datasetService = {
 // 问题服务
 export const questionService = {
   getAll: (projectId?: number): Question[] => {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') return mockQuestions;
     
     try {
       const stored = localStorage.getItem('app-store');
       if (stored) {
         const data = JSON.parse(stored);
-        let questions = data.state?.questions || [];
+        let questions = data.state?.questions || mockQuestions;
         
         if (projectId) {
           questions = questions.filter((q: Question) => q.projectId === projectId);
@@ -254,7 +254,7 @@ export const questionService = {
     } catch (error) {
       console.error('获取问题数据失败:', error);
     }
-    return [];
+    return mockQuestions;
   },
 
   getById: (id: number): Question | null => {
@@ -342,18 +342,18 @@ export const questionService = {
 // 答案服务
 export const answerService = {
   getAll: (): Answer[] => {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') return mockAnswers;
     
     try {
       const stored = localStorage.getItem('app-store');
       if (stored) {
         const data = JSON.parse(stored);
-        return data.state?.answers || [];
+        return data.state?.answers || mockAnswers;
       }
     } catch (error) {
       console.error('获取答案数据失败:', error);
     }
-    return [];
+    return mockAnswers;
   },
 
   getById: (id: number): Answer | null => {

@@ -862,9 +862,9 @@ export default function QuestionsPage() {
 
             {/* 分段选择区域 */}
             {showSegments && (
-              <section className="mt-6 flex-1 bg-white rounded-lg border border-gray-200 p-4 flex flex-col min-h-0 overflow-hidden">
+              <section className="mt-6 flex-1 bg-white rounded-lg border border-gray-200  flex flex-col min-h-0 overflow-hidden">
                 {/* 分段选择头部 */}
-                <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                <div className="flex items-center justify-between flex-shrink-0 p-4">
                   <h3 className="text-lg font-semibold text-gray-900">
                     分段选择 ({selectedSegments.length}/{segments.length})
                   </h3>
@@ -889,7 +889,7 @@ export default function QuestionsPage() {
                 </div>
                 
                 {/* 分段列表 */}
-                <div className="flex-1 overflow-y-auto space-y-4">
+                <div className="flex-1 overflow-y-auto space-y-4 p-4">
                   {segments.map((segment, index) => (
                     <article
                       key={index}

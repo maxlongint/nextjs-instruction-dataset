@@ -63,6 +63,8 @@ export default function ProjectDetailPage() {
   const [editForm, setEditForm] = useState({ name: '', description: '' });
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [showDeleteSegmentDialog, setShowDeleteSegmentDialog] = useState(false);
+  const [segmentToDelete, setSegmentToDelete] = useState<Segment | null>(null);
 
   const pageSize = 20;
 
@@ -319,6 +321,7 @@ export default function ProjectDetailPage() {
   };
 
   // 重新分段
+  // 重新分段
   const handleResegment = async () => {
     if (!selectedDataset) return;
 
@@ -341,6 +344,55 @@ export default function ProjectDetailPage() {
     } catch (error) {
       console.error('重新分段失败:', error);
       alert('重新分段失败');
+    }
+  };
+
+  // 处理分段删除
+  const handleDeleteSegment = (segment: Segment) => {
+    setSegmentToDelete(segment);
+    setShowDeleteSegmentDialog(true);
+  };
+
+  // 确认删除分段
+  const confirmDeleteSegment = async () => {
+    if (!segmentToDelete || !selectedDataset) return;
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 获取当前数据集的所有分段
+      const delimiter = selectedDataset.segmentDelimiter || '\n\n';
+      const allSegments = selectedDataset.content.split(delimiter)
+        .filter(segment => segment.trim().length > 0);
+
+      // 删除指定分段
+      const updatedSegments = allSegments.filter((_, index) => index !== segmentToDelete.id);
+      const updatedContent = updatedSegments.join(delimiter);
+
+      // 更新数据集内容
+      updateDataset(selectedDataset.id, {
+        content: updatedContent,
+        segmentCount: updatedSegments.length,
+        size: new Blob([updatedContent]).size
+      });
+
+      // 更新选中的数据集对象
+      const updatedDataset = { ...selectedDataset, content: updatedContent, segmentCount: updatedSegments.length };
+      setSelectedDataset(updatedDataset);
+
+      // 重新获取数据集列表和分段
+      await fetchDatasets();
+      await fetchSegments(updatedDataset, 1);
+
+      // 清空选择状态
+      setSelectedSegments([]);
+
+      setShowDeleteSegmentDialog(false);
+      setSegmentToDelete(null);
+      alert('分段删除成功');
+    } catch (error) {
+      console.error('删除分段失败:', error);
+      alert('删除分段失败');
     }
   };
 
@@ -599,10 +651,11 @@ export default function ProjectDetailPage() {
                                   </span>
                                 </Label>
                               </div>
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
                                 <button
                                   onClick={() => handleSegmentSelect(segment.id)}
                                   className="p-1 rounded-full hover:bg-blue-100 text-gray-400 hover:text-blue-600"
+                                  title={selectedSegments.includes(segment.id) ? "取消选择" : "选择分段"}
                                 >
                                   {selectedSegments.includes(segment.id) ? (
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -613,6 +666,16 @@ export default function ProjectDetailPage() {
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                     </svg>
                                   )}
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteSegment(segment);
+                                  }}
+                                  className="p-1 rounded-full hover:bg-red-100 text-gray-400 hover:text-red-600"
+                                  title="删除分段"
+                                >
+                                  <FiTrash2 className="h-4 w-4" />
                                 </button>
                               </div>
                             </div>
@@ -707,7 +770,7 @@ export default function ProjectDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除数据集</AlertDialogTitle>
             <AlertDialogDescription>
-              您确定要删除数据集 "{datasetToDelete?.name}" 吗？此操作不可撤销，相关的问题和答案也会被删除。
+              您确定要删除数据集 &quot;{datasetToDelete?.name}&quot; 吗？此操作不可撤销，相关的问题和答案也会被删除。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -719,6 +782,7 @@ export default function ProjectDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* 编辑数据集对话框 */}
       {/* 编辑数据集对话框 */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-md">
@@ -775,6 +839,29 @@ export default function ProjectDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 删除分段确认对话框 */}
+      <AlertDialog open={showDeleteSegmentDialog} onOpenChange={setShowDeleteSegmentDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除分段</AlertDialogTitle>
+            <AlertDialogDescription>
+              您确定要删除分段 &quot;{segmentToDelete?.segmentId}&quot; 吗？此操作不可撤销，该分段的内容将从数据集中永久移除。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteSegmentDialog(false)}>
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteSegment} 
+              className="bg-red-600 hover:bg-red-700"
+            >
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

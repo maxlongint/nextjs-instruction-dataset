@@ -21,6 +21,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { datasetService, questionService, answerService, projectService } from '../lib/data-service';
@@ -39,11 +49,26 @@ export default function AnswersPage() {
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedDataset, setSelectedDataset] = useState('');
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
+  const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
   const [prompt, setPrompt] = useState('请基于以下问题提供详细的答案：\n\n{question}');
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState({ current: 0, total: 0 });
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteAnswerId, setDeleteAnswerId] = useState<number | null>(null);
+
+  // 可用的AI模型列表
+  const availableModels = [
+    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', description: '快速响应，适合日常问答' },
+    { value: 'gpt-4', label: 'GPT-4', description: '更强推理能力，适合复杂问题' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', description: '平衡性能与成本' },
+    { value: 'claude-3-haiku', label: 'Claude 3 Haiku', description: '快速轻量，适合简单任务' },
+    { value: 'claude-3-sonnet', label: 'Claude 3 Sonnet', description: '平衡性能，适合多数场景' },
+    { value: 'claude-3-opus', label: 'Claude 3 Opus', description: '最强性能，适合复杂推理' }
+  ];
 
   // 获取项目列表 - 使用模拟数据
   const fetchProjects = async () => {
@@ -145,7 +170,8 @@ export default function AnswersPage() {
   // 生成答案 - 使用模拟生成器
   const handleGenerateAnswers = async () => {
     if (selectedQuestions.length === 0 || !prompt.trim()) {
-      alert('请选择问题并输入提示词');
+      setSuccessMessage('请选择问题并输入提示词');
+      setShowSuccessDialog(true);
       return;
     }
 
@@ -166,16 +192,40 @@ export default function AnswersPage() {
           // 模拟异步生成延迟
           await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1500));
           
-          // 生成模拟答案
-          const mockAnswers = [
-            `根据问题"${question.generatedQuestion}"，我认为这个问题涉及到多个重要方面。首先，我们需要理解问题的核心概念和背景。其次，需要分析相关的理论基础和实践应用。最后，结合具体情况给出合理的解释和建议。`,
-            `对于"${question.generatedQuestion}"这个问题，可以从以下几个角度来分析：1）理论层面的解释；2）实际应用中的表现；3）可能存在的问题和解决方案。通过综合分析，我们可以得出较为全面的答案。`,
-            `这是一个很好的问题。"${question.generatedQuestion}"涉及到的知识点比较广泛，需要我们从多个维度来思考。基于相关理论和实践经验，我认为关键在于理解其本质特征和运作机制。`,
-            `针对"${question.generatedQuestion}"，我的理解是这样的：首先需要明确问题的定义和范围，然后分析其重要性和影响因素，最后提出相应的观点和建议。这样可以确保答案的完整性和准确性。`,
-            `关于"${question.generatedQuestion}"这个问题，我认为需要从系统性的角度来回答。通过分析问题的各个组成部分及其相互关系，我们可以更好地理解问题的本质，并给出有价值的见解。`
-          ];
+          // 根据选择的模型生成不同风格的答案
+          const getModelSpecificAnswer = (model: string, question: string) => {
+            const baseAnswers = {
+              'gpt-3.5-turbo': [
+                `根据问题"${question}"，我认为这个问题涉及到多个重要方面。首先，我们需要理解问题的核心概念和背景。其次，需要分析相关的理论基础和实践应用。最后，结合具体情况给出合理的解释和建议。`,
+                `对于"${question}"这个问题，可以从以下几个角度来分析：1）理论层面的解释；2）实际应用中的表现；3）可能存在的问题和解决方案。通过综合分析，我们可以得出较为全面的答案。`
+              ],
+              'gpt-4': [
+                `这是一个深度问题："${question}"。让我从多个维度进行详细分析：\n\n1. 概念解析：首先需要明确核心概念的定义和内涵\n2. 理论基础：分析相关的理论框架和学术观点\n3. 实践应用：探讨在实际场景中的应用和表现\n4. 批判思考：评估可能存在的局限性和改进空间\n\n综合以上分析，我认为这个问题的关键在于...`,
+                `针对"${question}"这个复杂问题，我将采用系统性思维进行深入分析。通过梳理问题的多个层面和相互关系，我们可以构建一个更加完整和准确的理解框架。`
+              ],
+              'gpt-4-turbo': [
+                `关于"${question}"，这是一个需要平衡多个因素的问题。基于当前的理论研究和实践经验，我认为可以从效率、准确性和可行性三个维度来分析。通过优化这些关键要素，我们能够找到最佳的解决方案。`,
+                `"${question}"涉及到复杂的系统性思考。让我从成本效益、技术可行性和长期影响等角度进行综合评估，以提供一个既实用又前瞻的答案。`
+              ],
+              'claude-3-haiku': [
+                `简洁回答"${question}"：这个问题的核心在于理解基本概念和应用场景。通过分析关键要素，我们可以得出实用的结论和建议。`,
+                `对于"${question}"，我的观点是：重点关注实际应用价值，结合具体情况制定合适的策略。`
+              ],
+              'claude-3-sonnet': [
+                `关于"${question}"这个问题，我认为需要从平衡的角度来思考。一方面要考虑理论的严谨性，另一方面要注重实践的可操作性。通过综合分析各种因素，我们可以找到一个既符合理论要求又具有实际价值的答案。`,
+                `"${question}"是一个值得深入探讨的问题。基于我的理解，这个问题涉及多个相互关联的要素。通过系统性的分析和评估，我们可以得出更加全面和准确的结论。`
+              ],
+              'claude-3-opus': [
+                `这是一个极具挑战性的问题："${question}"。让我从哲学、实践和未来发展三个层面进行深度剖析：\n\n**哲学层面**：探讨问题的本质和深层含义\n**实践层面**：分析当前的应用状况和效果\n**未来发展**：预测可能的发展趋势和影响\n\n通过这种多维度的分析框架，我们可以获得对这个问题更加深刻和全面的理解。`,
+                `"${question}"代表了一个复杂的认知挑战。基于深度学习和推理能力，我将从多个角度进行细致的分析，包括历史背景、现状评估、问题识别、解决方案设计和未来展望等方面。`
+              ]
+            };
+            
+            const modelAnswers = baseAnswers[model as keyof typeof baseAnswers] || baseAnswers['gpt-3.5-turbo'];
+            return modelAnswers[Math.floor(Math.random() * modelAnswers.length)];
+          };
           
-          const generatedAnswer = mockAnswers[Math.floor(Math.random() * mockAnswers.length)];
+          const generatedAnswer = getModelSpecificAnswer(selectedModel, question.generatedQuestion);
           const processedPrompt = prompt.replace('{question}', question.generatedQuestion);
           
           // 创建新答案
@@ -186,6 +236,7 @@ export default function AnswersPage() {
             type: 'generated',
             status: 'approved',
             usageCount: 0,
+            sources: [`AI模型: ${availableModels.find(m => m.value === selectedModel)?.label || selectedModel}`],
             updatedAt: new Date().toISOString()
           });
           
@@ -194,7 +245,8 @@ export default function AnswersPage() {
       }
       
       setGeneratingProgress({ current: selectedQuestions.length, total: selectedQuestions.length });
-      alert(`成功生成 ${successCount} 个答案！`);
+      setSuccessMessage(`成功生成 ${successCount} 个答案！`);
+      setShowSuccessDialog(true);
       
       await fetchAnswers(); // 重新获取答案列表
       await fetchQuestions(selectedProject, selectedDataset); // 重新获取问题列表
@@ -202,7 +254,8 @@ export default function AnswersPage() {
       
     } catch (error) {
       console.error('生成答案失败:', error);
-      alert('生成答案失败');
+      setSuccessMessage('生成答案失败');
+      setShowSuccessDialog(true);
     } finally {
       setGenerating(false);
       setGeneratingProgress({ current: 0, total: 0 });
@@ -210,23 +263,34 @@ export default function AnswersPage() {
   };
 
   // 删除答案 - 使用模拟数据
-  const handleDeleteAnswer = async (answerId: number) => {
-    if (!confirm('确定要删除这个答案吗？')) return;
+  const handleDeleteAnswer = (answerId: number) => {
+    setDeleteAnswerId(answerId);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteAnswer = async () => {
+    if (!deleteAnswerId) return;
 
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const success = answerService.delete(answerId);
+      const success = answerService.delete(deleteAnswerId);
       
       if (success) {
         await fetchAnswers(); // 重新获取答案列表
-        alert('答案删除成功');
+        setSuccessMessage('答案删除成功');
+        setShowSuccessDialog(true);
       } else {
-        alert('删除失败: 答案不存在');
+        setSuccessMessage('删除失败: 答案不存在');
+        setShowSuccessDialog(true);
       }
     } catch (error) {
       console.error('删除答案失败:', error);
-      alert('删除答案失败');
+      setSuccessMessage('删除答案失败');
+      setShowSuccessDialog(true);
+    } finally {
+      setDeleteAnswerId(null);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -262,7 +326,8 @@ export default function AnswersPage() {
   };
 
   return (
-    <div className="h-full p-6 overflow-hidden flex flex-col gap-6">
+    <>
+      <div className="h-full p-6 overflow-hidden flex flex-col gap-6">
         {/* 页面头部区域 */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -270,21 +335,45 @@ export default function AnswersPage() {
             <p className="text-gray-600 mt-1">为生成的问题创建对应答案</p>
           </div>
           {/* 页面操作按钮组 */}
-          <div className="flex items-center gap-2 md:gap-3">
-            <Button
-              onClick={() => setShowPromptModal(true)}
-              variant="outline"
-              className="flex items-center"
-            >
-              <FiSettings className="mr-2 h-4 w-4" />
-              提示词配置
-            </Button>
-            <Button
-              variant="secondary"
-              className="flex items-center"
-            >
-              导出问答对
-            </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3">
+            {/* 模型选择器 */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                AI模型:
+              </label>
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger className="w-48 md:w-52">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="w-64">
+                  {availableModels.map((model) => (
+                    <SelectItem key={model.value} value={model.value}>
+                      <div className="flex flex-col py-1">
+                        <span className="font-medium">{model.label}</span>
+                        <span className="text-xs text-gray-500 leading-tight">{model.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setShowPromptModal(true)}
+                variant="outline"
+                className="flex items-center"
+              >
+                <FiSettings className="mr-2 h-4 w-4" />
+                提示词配置
+              </Button>
+              <Button
+                variant="secondary"
+                className="flex items-center"
+              >
+                导出问答对
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -367,7 +456,7 @@ export default function AnswersPage() {
                 ) : (
                   <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-2">
                     {questionsWithAnswers.length === 0 ? (
-                      <div className="text-center py-8 rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                      <div className="text-center py-8 rounded-lg border border-dashed border-gray-200 bg-gray-50">
                         <FiFileText className="mx-auto h-8 w-8 text-gray-400 mb-2" />
                         <p className="text-sm text-gray-500">该数据集暂无问题数据</p>
                       </div>
@@ -376,7 +465,7 @@ export default function AnswersPage() {
                         <article
                           key={item.id}
                           className={`border rounded-lg p-3 text-sm transition-colors shadow-sm ${
-                            item.answer ? 'bg-green-50 border-green-200 hover:bg-green-100' : 'bg-white hover:bg-gray-50'
+                            item.answer ? 'bg-green-50 border-green-200 hover:bg-green-100' : 'bg-white hover:bg-gray-50 border-gray-200'
                           }`}
                         >
                           <div className="flex items-start gap-3">
@@ -463,19 +552,19 @@ export default function AnswersPage() {
                 ) : (
                   <div className="space-y-4 flex-1 min-h-0 pr-2">
                     {!selectedProject ? (
-                      <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                      <div className="text-center py-12 rounded-lg border border-dashed border-gray-200 bg-gray-50">
                         <FiFileText className="mx-auto h-10 w-10 text-gray-400 mb-3" />
                         <p className="text-gray-500 font-medium">请先选择项目</p>
                         <p className="text-sm text-gray-400 mt-1">从左侧选择一个项目开始</p>
                       </div>
                     ) : !selectedDataset ? (
-                      <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                      <div className="text-center py-12 rounded-lg border border-dashed border-gray-200 bg-gray-50">
                         <FiFileText className="mx-auto h-10 w-10 text-gray-400 mb-3" />
                         <p className="text-gray-500 font-medium">请选择数据集</p>
                         <p className="text-sm text-gray-400 mt-1">从左侧选择一个数据集继续</p>
                       </div>
                     ) : questionsWithAnswers.length === 0 ? (
-                      <div className="text-center py-12 rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                      <div className="text-center py-12 rounded-lg border border-dashed border-gray-200 bg-gray-50">
                         <FiFileText className="mx-auto h-10 w-10 text-gray-400 mb-3" />
                         <p className="text-gray-500 font-medium">该数据集暂无问题数据</p>
                         <p className="text-sm text-gray-400 mt-1">请先生成问题或选择其他数据集</p>
@@ -539,7 +628,14 @@ export default function AnswersPage() {
                           {item.answer && (
                             <div className="px-4 pb-4">
                               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                                <div className="text-sm text-gray-600 mb-1 font-medium">答案:</div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="text-sm text-gray-600 font-medium">答案:</div>
+                                  {item.answer.sources && item.answer.sources.length > 0 && (
+                                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                      {item.answer.sources[0]}
+                                    </Badge>
+                                  )}
+                                </div>
                                 <div className="text-gray-800">{item.answer.generatedAnswer}</div>
                               </div>
                             </div>
@@ -606,6 +702,44 @@ export default function AnswersPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-    </div>
+      </div>
+
+      {/* 成功提示对话框 */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>操作成功</AlertDialogTitle>
+            <AlertDialogDescription>
+              {successMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowSuccessDialog(false)}>
+              确定
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 删除确认对话框 */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除这个答案吗？此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteAnswer}>
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

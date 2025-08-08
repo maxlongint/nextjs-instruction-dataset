@@ -53,7 +53,7 @@ export interface Dataset {
   uploadProgress?: number;
   encoding?: string;
   language?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   tags: string[];
   isPublic: boolean;
   downloadCount: number;
@@ -78,7 +78,7 @@ export interface NewDataset {
   uploadProgress?: number;
   encoding?: string;
   language?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   tags?: string[];
   isPublic?: boolean;
 }
@@ -412,7 +412,7 @@ export interface SortOptions {
 export interface BulkOperation {
   action: 'delete' | 'export' | 'archive' | 'activate' | 'update_status' | 'assign_tags';
   itemIds: number[];
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
 }
 
 export interface BulkOperationResult {

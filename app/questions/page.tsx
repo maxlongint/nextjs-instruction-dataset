@@ -487,7 +487,7 @@ export default function QuestionsPage() {
                         <p className="text-sm text-gray-500">该数据集暂无分段数据</p>
                       </div>
                     ) : (
-                      segments.map((segment) => (
+                      segments.map((segment, index) => (
                         <article
                           key={segment.id}
                           className={`border rounded-lg p-3 text-sm transition-colors shadow-sm ${
@@ -502,7 +502,7 @@ export default function QuestionsPage() {
                             />
                             <div className="flex-1 min-w-0">
                               <div className="font-medium mb-1 text-xs text-gray-500">
-                                {segment.segmentId}
+                                分段{index + 1}
                               </div>
                               <div className="line-clamp-3">
                                 {segment.content}
@@ -636,7 +636,7 @@ export default function QuestionsPage() {
                           <footer className="border-t bg-gray-50 py-2 px-4 text-xs text-gray-500">
                             生成时间: {new Date(question.createdAt).toLocaleString('zh-CN')}
                             <span className="ml-4">
-                              分段ID: segment-{question.segmentId + 1}
+                              来自分段{question.segmentId + 1}
                             </span>
                           </footer>
                         </article>

@@ -460,36 +460,37 @@ export default function AnswersPage() {
                         <FiFileText className="mx-auto h-8 w-8 text-gray-400 mb-2" />
                         <p className="text-sm text-gray-500">该数据集暂无问题数据</p>
                       </div>
+                    ) : questionsWithAnswers.filter(item => !item.answer).length === 0 ? (
+                      <div className="text-center py-8 rounded-lg border border-dashed border-gray-200 bg-gray-50">
+                        <FiFileText className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-500">所有问题都已生成答案</p>
+                        <p className="text-xs text-gray-400 mt-1">请查看右侧答案列表</p>
+                      </div>
                     ) : (
-                      questionsWithAnswers.map((item) => (
-                        <article
-                          key={item.id}
-                          className={`border rounded-lg p-3 text-sm transition-colors shadow-sm ${
-                            item.answer ? 'bg-green-50 border-green-200 hover:bg-green-100' : 'bg-white hover:bg-gray-50 border-gray-200'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            {!item.answer && (
+                      questionsWithAnswers
+                        .filter(item => !item.answer) // 只显示未生成答案的问题
+                        .map((item) => (
+                          <article
+                            key={item.id}
+                            className="border rounded-lg p-3 text-sm transition-colors shadow-sm bg-white hover:bg-gray-50 border-gray-200"
+                          >
+                            <div className="flex items-start gap-3">
                               <Checkbox
                                 checked={selectedQuestions.includes(item.id)}
                                 onCheckedChange={() => toggleQuestionSelection(item.id)}
                                 className="mt-0.5"
                               />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium line-clamp-2">
-                                {item.generatedQuestion}
-                              </div>
-                              {item.answer && (
-                                <Badge variant="outline" className="mt-2 bg-green-50 text-green-700 border-green-200">
-                                  <FiCheck className="mr-1 h-3 w-3" />
-                                  已生成答案
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium line-clamp-2">
+                                  {item.generatedQuestion}
+                                </div>
+                                <Badge variant="outline" className="mt-2 bg-blue-50 text-blue-700 border-blue-200">
+                                  待生成答案
                                 </Badge>
-                              )}
+                              </div>
                             </div>
-                          </div>
-                        </article>
-                      ))
+                          </article>
+                        ))
                     )}
                   </div>
                 )}
@@ -569,50 +570,42 @@ export default function AnswersPage() {
                         <p className="text-gray-500 font-medium">该数据集暂无问题数据</p>
                         <p className="text-sm text-gray-400 mt-1">请先生成问题或选择其他数据集</p>
                       </div>
+                    ) : questionsWithAnswers.filter(item => item.answer).length === 0 ? (
+                      <div className="text-center py-12 rounded-lg border border-dashed border-gray-200 bg-gray-50">
+                        <FiFileText className="mx-auto h-10 w-10 text-gray-400 mb-3" />
+                        <p className="text-gray-500 font-medium">暂无已生成的答案</p>
+                        <p className="text-sm text-gray-400 mt-1">请先选择问题并生成答案</p>
+                      </div>
                     ) : (
-                      questionsWithAnswers.map((item) => (
-                        <article
-                          key={item.id}
-                          className={`border rounded-lg shadow-sm overflow-hidden transition-all ${
-                            item.answer ? 'border-green-200' : 'border-gray-200'
-                          }`}
-                        >
-                          {/* 问题信息区域 */}
-                          <div className="flex items-start p-4 pb-3">
-                            <div className="flex items-start gap-3 flex-1">
-                              {!item.answer && (
-                                <Checkbox
-                                  checked={selectedQuestions.includes(item.id)}
-                                  onCheckedChange={() => toggleQuestionSelection(item.id)}
-                                  className="mt-1"
-                                />
-                              )}
-                              <div className="flex-1">
-                                {/* 项目和数据集标签 */}
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Badge variant="outline" className="text-xs font-normal">
-                                    {getProjectName(item.projectId)} / {getDatasetName(item.datasetId)}
-                                  </Badge>
-                                  {item.answer ? (
+                      questionsWithAnswers
+                        .filter(item => item.answer) // 只显示已生成答案的问题
+                        .map((item) => (
+                          <article
+                            key={item.id}
+                            className="border border-green-200 rounded-lg shadow-sm overflow-hidden transition-all hover:shadow-md"
+                          >
+                            {/* 问题信息区域 */}
+                            <div className="flex items-start p-4 pb-3">
+                              <div className="flex items-start gap-3 flex-1">
+                                <div className="flex-1">
+                                  {/* 项目和数据集标签 */}
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="outline" className="text-xs font-normal">
+                                      {getProjectName(item.projectId)} / {getDatasetName(item.datasetId)}
+                                    </Badge>
                                     <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-200">
                                       <FiCheck className="mr-1 h-3 w-3" />
                                       已生成答案
                                     </Badge>
-                                  ) : (
-                                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                      待生成
-                                    </Badge>
-                                  )}
-                                </div>
-                                {/* 问题内容 */}
-                                <div className="font-medium mb-2 text-gray-900">
-                                  {item.generatedQuestion}
+                                  </div>
+                                  {/* 问题内容 */}
+                                  <div className="font-medium mb-2 text-gray-900">
+                                    {item.generatedQuestion}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            
-                            {/* 删除按钮 */}
-                            {item.answer && (
+                              
+                              {/* 删除按钮 */}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -621,37 +614,32 @@ export default function AnswersPage() {
                               >
                                 <FiTrash2 className="h-4 w-4" />
                               </Button>
-                            )}
-                          </div>
-                          
-                          {/* 答案内容区域 */}
-                          {item.answer && (
+                            </div>
+                            
+                            {/* 答案内容区域 */}
                             <div className="px-4 pb-4">
                               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="text-sm text-gray-600 font-medium">答案:</div>
-                                  {item.answer.sources && item.answer.sources.length > 0 && (
+                                  {item.answer!.sources && item.answer!.sources.length > 0 && (
                                     <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                      {item.answer.sources[0]}
+                                      {item.answer!.sources[0]}
                                     </Badge>
                                   )}
                                 </div>
-                                <div className="text-gray-800">{item.answer.generatedAnswer}</div>
+                                <div className="text-gray-800">{item.answer!.generatedAnswer}</div>
                               </div>
                             </div>
-                          )}
-                          
-                          {/* 时间信息区域 */}
-                          <footer className="border-t bg-gray-50 py-2 px-4 text-xs text-gray-500">
-                            问题生成时间: {new Date(item.createdAt).toLocaleString('zh-CN')}
-                            {item.answer && (
+                            
+                            {/* 时间信息区域 */}
+                            <footer className="border-t bg-gray-50 py-2 px-4 text-xs text-gray-500">
+                              问题生成时间: {new Date(item.createdAt).toLocaleString('zh-CN')}
                               <span className="ml-4">
-                                答案生成时间: {new Date(item.answer.createdAt).toLocaleString('zh-CN')}
+                                答案生成时间: {new Date(item.answer!.createdAt).toLocaleString('zh-CN')}
                               </span>
-                            )}
-                          </footer>
-                        </article>
-                      ))
+                            </footer>
+                          </article>
+                        ))
                     )}
                   </div>
                 )}

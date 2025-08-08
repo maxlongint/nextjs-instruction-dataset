@@ -34,6 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { datasetService, questionService, answerService, projectService } from '../lib/data-service';
+import { forceInitializeData, checkDataStatus } from '../lib/init-data';
 import { Project, Dataset, Question, Answer } from '../types';
 
 interface QuestionWithAnswer extends Question {
@@ -75,6 +76,7 @@ export default function AnswersPage() {
     try {
       await new Promise(resolve => setTimeout(resolve, 300));
       const projects = projectService.getAll();
+      console.log('获取到的项目:', projects.length);
       setProjects(projects);
     } catch (error) {
       console.error('获取项目列表失败:', error);
@@ -86,6 +88,7 @@ export default function AnswersPage() {
     try {
       await new Promise(resolve => setTimeout(resolve, 400));
       const datasets = datasetService.getAll(parseInt(projectId));
+      console.log('获取到的数据集:', datasets.length);
       setDatasets(datasets);
     } catch (error) {
       console.error('获取数据集列表失败:', error);
@@ -99,14 +102,19 @@ export default function AnswersPage() {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       let questions = questionService.getAll();
+      console.log('所有问题数量:', questions.length);
+      console.log('筛选条件 - 项目ID:', projectId, '数据集ID:', datasetId);
       
       if (projectId) {
         questions = questions.filter(q => q.projectId === parseInt(projectId));
+        console.log('按项目筛选后问题数量:', questions.length);
       }
       if (datasetId) {
         questions = questions.filter(q => q.datasetId === parseInt(datasetId));
+        console.log('按数据集筛选后问题数量:', questions.length);
       }
       
+      console.log('最终问题列表:', questions.map(q => ({ id: q.id, question: q.generatedQuestion, projectId: q.projectId, datasetId: q.datasetId })));
       setQuestions(questions);
     } catch (error) {
       console.error('获取问题列表失败:', error);
@@ -120,6 +128,7 @@ export default function AnswersPage() {
     try {
       await new Promise(resolve => setTimeout(resolve, 300));
       const answers = answerService.getAll();
+      console.log('获取到的答案:', answers.length);
       setAnswers(answers);
     } catch (error) {
       console.error('获取答案列表失败:', error);
@@ -141,10 +150,28 @@ export default function AnswersPage() {
         answer
       };
     });
+    console.log('合并后的问题答案数据:', merged.length);
     setQuestionsWithAnswers(merged);
   };
 
   useEffect(() => {
+    // 强制初始化数据
+    console.log('开始初始化数据...');
+    forceInitializeData();
+    checkDataStatus();
+    
+    // 验证数据是否正确加载
+    setTimeout(() => {
+      const allQuestions = questionService.getAll();
+      console.log('初始化后的所有问题:', allQuestions.length);
+      console.log('问题详情:', allQuestions.map(q => ({ 
+        id: q.id, 
+        projectId: q.projectId, 
+        datasetId: q.datasetId, 
+        question: q.generatedQuestion 
+      })));
+    }, 100);
+    
     fetchProjects();
     fetchAnswers();
   }, []);

@@ -616,74 +616,49 @@ export default function ProjectDetailPage() {
                   </div>
                 ) : showSegments && segments.length > 0 ? (
                   <>
-                    <div className="grid grid-cols-1 gap-3 md:gap-4 ">
+                    <div className="space-y-4">
                       {segments.map((segment) => (
                         <div
                           key={segment.id}
-                          className={`group border transition-all duration-200 rounded-xl shadow-sm hover:shadow-md ${selectedSegments.includes(segment.id)
-                              ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200 ring-opacity-50'
-                              : 'border-gray-200 hover:border-blue-200'
+                          className={`group relative border transition-all duration-200 rounded-lg shadow-sm hover:shadow-md ${selectedSegments.includes(segment.id)
+                              ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-200'
+                              : 'bg-white border-gray-200 hover:border-blue-200'
                             }`}
                         >
-                          <div className="flex flex-col">
-                            {/* 分段标题栏 */}
-                            <div className={`flex items-center justify-between px-4 py-3 border-b ${selectedSegments.includes(segment.id) ? 'border-blue-200 bg-blue-100/50' : 'border-gray-100'
-                              }`}>
-                              <div className="flex items-center space-x-3">
-                                <Checkbox
-                                  id={`segment-${segment.id}`}
-                                  checked={selectedSegments.includes(segment.id)}
-                                  onCheckedChange={() => handleSegmentSelect(segment.id)}
-                                  className={`h-4 w-4 ${selectedSegments.includes(segment.id) ? 'text-blue-600' : 'text-gray-400'}`}
-                                />
-                                <Label
-                                  htmlFor={`segment-${segment.id}`}
-                                  className={`text-sm font-medium cursor-pointer ${selectedSegments.includes(segment.id) ? 'text-blue-700' : 'text-gray-700'
-                                    }`}
-                                >
-                                  <span className="flex items-center">
-                                    <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 mr-2">
-                                      {segment.segmentId}
+                          {/* 分段内容主体 */}
+                          <div className="p-4">
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                id={`segment-${segment.id}`}
+                                checked={selectedSegments.includes(segment.id)}
+                                onCheckedChange={() => handleSegmentSelect(segment.id)}
+                                className="mt-1 flex-shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                {/* 分段标识和字符数 */}
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-100 text-xs font-medium text-gray-700">
+                                      第 {segment.id + 1} 段
                                     </span>
                                     <span className="text-xs text-gray-500">
                                       {segment.content.length} 字符
                                     </span>
-                                  </span>
-                                </Label>
-                              </div>
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
-                                <button
-                                  onClick={() => handleSegmentSelect(segment.id)}
-                                  className="p-1 rounded-full hover:bg-blue-100 text-gray-400 hover:text-blue-600"
-                                  title={selectedSegments.includes(segment.id) ? "取消选择" : "选择分段"}
-                                >
-                                  {selectedSegments.includes(segment.id) ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                  ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  )}
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteSegment(segment);
-                                  }}
-                                  className="p-1 rounded-full hover:bg-red-100 text-gray-400 hover:text-red-600"
-                                  title="删除分段"
-                                >
-                                  <FiTrash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* 分段内容 */}
-                            <div className="p-4">
-                              <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-                                {segment.content}
+                                  </div>
+                                  {/* 删除按钮 */}
+                                  <button
+                                    onClick={() => handleDeleteSegment(segment)}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-red-100 text-gray-400 hover:text-red-600"
+                                    title="删除分段"
+                                  >
+                                    <FiTrash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                
+                                {/* 分段文本内容 */}
+                                <div className="text-sm text-gray-800 leading-relaxed">
+                                  <p className="whitespace-pre-wrap">{segment.content}</p>
+                                </div>
                               </div>
                             </div>
                           </div>

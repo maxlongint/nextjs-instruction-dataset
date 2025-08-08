@@ -53,7 +53,7 @@ export default function HomePage() {
                 开始创建项目
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="bg-blue-500 text-white border-blue-400 hover:bg-blue-400">
+            <Button asChild variant="outline" size="lg" className="bg-blue-500 text-white hover:bg-blue-400">
               <Link href="/questions">
                 生成问题
               </Link>
@@ -236,7 +236,7 @@ export default function HomePage() {
                 {recentQuestions.map((question) => {
                   const hasAnswer = answers.some(answer => answer.questionId === question.id);
                   return (
-                    <Card key={question.id} className="border-gray-200">
+                    <Card key={question.id}>
                       <CardContent className="p-3">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -338,7 +338,7 @@ export default function HomePage() {
       </Card>
 
       {/* 页面底部 - 使用提示和帮助信息 */}
-      <Card className="bg-blue-50 border-blue-200">
+      <Card className="bg-blue-50">
         <CardContent className="p-6">
           <div className="flex items-start">
             <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">

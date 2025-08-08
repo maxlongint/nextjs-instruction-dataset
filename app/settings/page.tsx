@@ -118,8 +118,6 @@ export default function SettingsPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [showWarningDialog, setShowWarningDialog] = useState(false);
-  const [warningMessage, setWarningMessage] = useState('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
@@ -729,25 +727,6 @@ export default function SettingsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 警告提示 Alert Dialog */}
-      <AlertDialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center">
-              <div className="h-5 w-5 text-orange-600 mr-2">⚠️</div>
-              警告
-            </AlertDialogTitle>
-            <AlertDialogDescription className="whitespace-pre-line">
-              {warningMessage}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowWarningDialog(false)}>
-              确定
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* 确认操作 Alert Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

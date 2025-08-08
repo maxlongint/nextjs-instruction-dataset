@@ -2,17 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FiUpload, FiFile, FiEdit, FiTrash2, FiDownload, FiRefreshCw, FiChevronLeft, FiChevronRight, FiSearch, FiFilter } from 'react-icons/fi';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from '@/components/ui/button';
+import { FiUpload, FiFile, FiEdit, FiTrash2, FiRefreshCw, FiChevronLeft, FiChevronRight, FiSearch } from 'react-icons/fi';
 import { Progress } from '@/components/ui/progress';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import {
@@ -25,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { projectService, datasetService } from '../../lib/data-service';
+import { datasetService } from '../../lib/data-service';
 import { useProjects, useDatasets } from '../../lib/store';
 import { Project, Dataset } from '../../types';
 
@@ -41,7 +32,7 @@ export default function ProjectDetailPage() {
   const projectId = params.id as string;
 
   const { projects } = useProjects();
-  const { datasets, addDataset, updateDataset, deleteDataset } = useDatasets();
+  const { addDataset, updateDataset, deleteDataset } = useDatasets();
 
   const [project, setProject] = useState<Project | null>(null);
   const [projectDatasets, setProjectDatasets] = useState<Dataset[]>([]);
@@ -64,9 +55,6 @@ export default function ProjectDetailPage() {
 
   const pageSize = 20;
 
-  useEffect(() => {
-    // 初始化数据已在store中完成，这里不需要额外操作
-  }, []);
 
   useEffect(() => {
     if (projectId && projects.length > 0) {

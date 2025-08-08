@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { FiPlay, FiSettings, FiDownload, FiCpu, FiCheckCircle, FiXCircle, FiRefreshCw, FiInfo, FiAlertTriangle, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiPlay, FiSettings, FiCpu, FiCheckCircle, FiXCircle, FiRefreshCw, FiInfo, FiAlertTriangle, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import {
   Select,
   SelectContent,
@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { projectService, datasetService, questionService, templateService } from '../lib/data-service';
+import { datasetService, questionService, templateService, projectService } from '../lib/data-service';
 import { Project, Dataset, Question, Segment } from '../types';
 
 interface AIConfig {
@@ -1121,7 +1121,6 @@ export default function QuestionsPage() {
                   </div>
                   
                   <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                    <FiDownload className="mr-2 h-4 w-4" />
                     导出数据
                   </button>
                 </div>

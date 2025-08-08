@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FiPlay, FiSettings, FiDownload, FiTrash2, FiCheck, FiList, FiFileText, FiInfo } from 'react-icons/fi';
+import { FiPlay, FiSettings, FiTrash2, FiCheck, FiList, FiFileText, FiInfo } from 'react-icons/fi';
 import {
   Select,
   SelectContent,
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { projectService, datasetService, questionService, answerService } from '../lib/data-service';
+import { datasetService, questionService, answerService, projectService } from '../lib/data-service';
 import { Project, Dataset, Question, Answer } from '../types';
 
 interface QuestionWithAnswer extends Question {
@@ -273,7 +273,6 @@ export default function AnswersPage() {
               variant="secondary"
               className="flex items-center"
             >
-              <FiDownload className="mr-2 h-4 w-4" />
               导出问答对
             </Button>
           </div>

@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiPlus, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Loading } from '@/components/ui/loading';
 import ProjectFormModal from '@/components/projects/project-form-modal';
 import ConfirmModal from '@/components/common/confirm-modal';
 import { projectService, datasetService } from '../lib/data-service';
@@ -149,72 +153,76 @@ export default function ProjectsPage() {
             <p className="text-gray-600 mt-1">管理您的指令微调项目和数据集</p>
           </div>
           {/* 新建项目按钮 */}
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
+          <Button onClick={() => setIsCreateModalOpen(true)}>
             <FiPlus className="mr-2 h-4 w-4" />
             新建项目
-          </button>
+          </Button>
         </header>
 
         {/* 加载状态 */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-gray-600">加载中...</span>
+          <div className="py-12">
+            <Loading size="lg" text="加载中..." />
           </div>
         ) : (
           <>
             {/* 项目卡片网格 */}
             <section className="grid grid-cols-1 2xl:grid-cols-3 lg:grid-cols-2 gap-6">
               {projects.map((project) => (
-                <article
+                <Card
                   key={project.id}
-                  className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                  className="hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => router.push(`/projects/${project.id}`)}
                 >
+                  <CardHeader>
                     {/* 卡片头部 */}
-                    <div className="flex items-start justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="truncate">
                         {project.name}
-                      </h3>
+                      </CardTitle>
                       {/* 操作按钮组 */}
                       <div className="flex items-center gap-2">
-                        <button 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             openEditModal(project);
                           }}
-                          className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                          className="p-1 h-auto text-gray-400 hover:text-green-600"
                           title="编辑项目"
                         >
                           <FiEdit className="h-4 w-4" />
-                        </button>
-                        <button 
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             openDeleteModal(project);
                           }}
-                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          className="p-1 h-auto text-gray-400 hover:text-red-600"
                           title="删除项目"
                         >
                           <FiTrash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
-                    
+                  </CardHeader>
+                  
+                  <CardContent>
                     {/* 项目描述 */}
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    <CardDescription className="mb-4 line-clamp-2">
                       {project.description || '暂无描述'}
-                    </p>
+                    </CardDescription>
                     
                     {/* 项目统计信息 */}
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                      <span>数据集: {project.datasetCount} 个</span>
-                      <span>创建于: {new Date(project.createdAt).toLocaleDateString('zh-CN')}</span>
+                    <div className="flex items-center justify-between text-sm">
+                      <Badge variant="outline">数据集: {project.datasetCount} 个</Badge>
+                      <span className="text-gray-500">创建于: {new Date(project.createdAt).toLocaleDateString('zh-CN')}</span>
                     </div>
-                </article>
+                  </CardContent>
+                </Card>
               ))}
             </section>
           </>
@@ -222,22 +230,21 @@ export default function ProjectsPage() {
 
         {/* 空状态展示 */}
         {!loading && projects.length === 0 && (
-          <section className="text-center py-12">
-            <div className="mx-auto h-12 w-12 text-gray-400">
-              <FiPlus className="h-full w-full" />
-            </div>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">暂无项目</h3>
-            <p className="mt-1 text-sm text-gray-500">开始创建您的第一个项目</p>
-            <div className="mt-6">
-              <button 
-                onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <FiPlus className="mr-2 h-4 w-4" />
-                新建项目
-              </button>
-            </div>
-          </section>
+          <Card>
+            <CardContent className="text-center py-12">
+              <div className="mx-auto h-12 w-12 text-gray-400">
+                <FiPlus className="h-full w-full" />
+              </div>
+              <CardTitle className="mt-2 text-sm">暂无项目</CardTitle>
+              <CardDescription className="mt-1">开始创建您的第一个项目</CardDescription>
+              <div className="mt-6">
+                <Button onClick={() => setIsCreateModalOpen(true)}>
+                  <FiPlus className="mr-2 h-4 w-4" />
+                  新建项目
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* 模态框组件 */}

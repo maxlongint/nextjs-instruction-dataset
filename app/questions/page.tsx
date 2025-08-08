@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Loading } from '@/components/ui/loading';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -1127,9 +1128,8 @@ export default function QuestionsPage() {
               </div>
               
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-gray-600">加载中...</span>
+                <div className="py-8">
+                  <Loading size="md" text="加载中..." />
                 </div>
               ) : (
                 <>

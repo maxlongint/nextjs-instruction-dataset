@@ -9,6 +9,8 @@ import {
   FiMessageSquare, 
   FiSettings 
 } from 'react-icons/fi';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 const navigation = [
   { name: '首页', href: '/', icon: FiHome },
@@ -43,27 +45,32 @@ export default function Sidebar({ onClose }: SidebarProps) {
             }
             const IconComponent = item.icon;
             return (
-              <Link
+              <Button
                 key={item.name}
-                href={item.href}
-                onClick={() => onClose?.()}
+                asChild
+                variant={isActive ? "secondary" : "ghost"}
                 className={`
-                  group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+                  w-full justify-start
                   ${isActive 
-                    ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-500' 
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-100' 
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }
                 `}
               >
-                <IconComponent
-                  className={`
-                    mr-3 h-5 w-5 flex-shrink-0
-                    ${isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'}
-                  `}
-                  aria-hidden="true"
-                />
-                {item.name}
-              </Link>
+                <Link
+                  href={item.href}
+                  onClick={() => onClose?.()}
+                >
+                  <IconComponent
+                    className={`
+                      mr-3 h-5 w-5 flex-shrink-0
+                      ${isActive ? 'text-blue-500' : 'text-gray-400'}
+                    `}
+                    aria-hidden="true"
+                  />
+                  {item.name}
+                </Link>
+              </Button>
             );
           })}
         </div>

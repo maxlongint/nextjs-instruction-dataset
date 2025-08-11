@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { datasetService } from '../../lib/data-service';
 import { useProjects, useDatasets } from '../../lib/store';
 import { Project, Dataset } from '../../types';
@@ -189,7 +190,10 @@ export default function ProjectDetailPage() {
     if (!file) return;
 
     if (!file.name.endsWith('.txt') && !file.name.endsWith('.md')) {
-      alert('请上传 .txt 或 .md 格式的文件');
+      toast.error('文件格式不支持', {
+        description: '请上传 .txt 或 .md 格式的文件',
+        duration: 3000,
+      });
       return;
     }
 
@@ -244,11 +248,17 @@ export default function ProjectDetailPage() {
       setUploadProgress(100);
 
       await fetchDatasets();
-      alert(`数据集 "${newDataset.name}" 上传成功！`);
+      toast.success('数据集上传成功！', {
+        description: `"${newDataset.name}" 已成功上传并处理`,
+        duration: 3000,
+      });
 
     } catch (error) {
       console.error('文件上传失败:', error);
-      alert('文件上传失败，请重试');
+      toast.error('文件上传失败', {
+        description: '请检查文件格式或稍后重试',
+        duration: 4000,
+      });
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -326,10 +336,16 @@ export default function ProjectDetailPage() {
       await fetchDatasets();
       setShowEditDialog(false);
       setEditingDataset(null);
-      alert('数据集信息更新成功');
+      toast.success('数据集信息更新成功', {
+        description: '数据集名称和描述已保存',
+        duration: 3000,
+      });
     } catch (error) {
       console.error('更新数据集失败:', error);
-      alert('更新数据集失败');
+      toast.error('更新数据集失败', {
+        description: '请稍后重试',
+        duration: 4000,
+      });
     }
   };
 
@@ -359,10 +375,16 @@ export default function ProjectDetailPage() {
 
       setShowDeleteDialog(false);
       setDatasetToDelete(null);
-      alert('数据集删除成功');
+      toast.success('数据集删除成功', {
+        description: '数据集及相关内容已被移除',
+        duration: 3000,
+      });
     } catch (error) {
       console.error('删除数据集失败:', error);
-      alert('删除数据集失败');
+      toast.error('删除数据集失败', {
+        description: '请稍后重试',
+        duration: 4000,
+      });
     }
   };
 
@@ -385,17 +407,26 @@ export default function ProjectDetailPage() {
       await fetchDatasets();
       await fetchSegments(selectedDataset, 1);
 
-      alert('重新分段完成');
+      toast.success('重新分段完成', {
+        description: `已成功重新分段，共生成 ${newSegmentCount} 个分段`,
+        duration: 3000,
+      });
     } catch (error) {
       console.error('重新分段失败:', error);
-      alert('重新分段失败');
+      toast.error('重新分段失败', {
+        description: '请稍后重试或检查数据集内容',
+        duration: 4000,
+      });
     }
   };
 
   // 智能分段
   const handleSmartSegment = async () => {
     if (!selectedDataset || !smartSegmentPrompt.trim()) {
-      alert('请填写提示词');
+      toast.error('提示词不能为空', {
+        description: '请填写智能分段的提示词',
+        duration: 3000,
+      });
       return;
     }
 
@@ -513,11 +544,17 @@ export default function ProjectDetailPage() {
       await fetchSegments(updatedDataset, 1);
 
       setShowSmartSegmentDialog(false);
-      alert(`智能分段完成！使用 ${modelOptions.find(m => m.value === smartSegmentModel)?.label} 生成了 ${smartSegments.length} 个分段`);
+      toast.success('智能分段完成！', {
+        description: `使用 ${modelOptions.find(m => m.value === smartSegmentModel)?.label} 生成了 ${smartSegments.length} 个分段`,
+        duration: 4000,
+      });
 
     } catch (error) {
       console.error('智能分段失败:', error);
-      alert('智能分段失败');
+      toast.error('智能分段失败', {
+        description: '请检查网络连接或稍后重试',
+        duration: 4000,
+      });
     } finally {
       setSmartSegmenting(false);
       setSmartSegmentProgress(0);
@@ -566,10 +603,16 @@ export default function ProjectDetailPage() {
 
       setShowDeleteSegmentDialog(false);
       setSegmentToDelete(null);
-      alert('分段删除成功');
+      toast.success('分段删除成功', {
+        description: '该分段已从数据集中移除',
+        duration: 3000,
+      });
     } catch (error) {
       console.error('删除分段失败:', error);
-      alert('删除分段失败');
+      toast.error('删除分段失败', {
+        description: '请稍后重试',
+        duration: 4000,
+      });
     }
   };
 

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loading } from '@/components/ui/loading';
+import { toast } from "sonner";
 import ProjectFormModal from '@/components/projects/project-form-modal';
 import ConfirmModal from '@/components/common/confirm-modal';
 import { projectService, datasetService } from '../lib/data-service';
@@ -78,7 +79,10 @@ export default function ProjectsPage() {
       }
     } catch (error) {
       console.error('创建项目失败:', error);
-      alert('创建项目失败');
+      toast.error('创建项目失败', {
+        description: '请稍后重试',
+        duration: 4000,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -103,7 +107,10 @@ export default function ProjectsPage() {
       }
     } catch (error) {
       console.error('更新项目失败:', error);
-      alert('更新项目失败');
+      toast.error('更新项目失败', {
+        description: '请稍后重试',
+        duration: 4000,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -122,10 +129,17 @@ export default function ProjectsPage() {
         setIsDeleteModalOpen(false);
         setSelectedProject(null);
         fetchProjects(); // 重新获取项目列表
+        toast.success('项目删除成功', {
+          description: '项目及其相关数据已被永久删除',
+          duration: 3000,
+        });
       }
     } catch (error) {
       console.error('删除项目失败:', error);
-      alert('删除项目失败');
+      toast.error('删除项目失败', {
+        description: '请稍后重试',
+        duration: 4000,
+      });
     } finally {
       setIsSubmitting(false);
     }

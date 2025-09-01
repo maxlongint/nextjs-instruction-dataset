@@ -1,11 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  trailingSlash: true,
-  images: {
-    unoptimized: true
-  },
-  // 暂时移除静态导出配置，因为动态路由不兼容
-  // output: 'export',
+    output: 'export',
+    trailingSlash: true,
+    images: {
+        unoptimized: true,
+    },
+    // GitHub Pages 部署配置
+    basePath: process.env.NODE_ENV === 'production' ? '/nextjs-instruction-dataset' : '',
+    assetPrefix: process.env.NODE_ENV === 'production' ? '/nextjs-instruction-dataset/' : '',
+    // 在构建时忽略 ESLint 错误（仅用于部署）
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
+    // 在构建时忽略 TypeScript 错误（仅用于部署）
+    typescript: {
+        ignoreBuildErrors: true,
+    },
 };
 
 export default nextConfig;

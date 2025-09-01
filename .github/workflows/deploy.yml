@@ -10,6 +10,8 @@ permissions:
     contents: read
     pages: write
     id-token: write
+    actions: read
+    checks: write
 
 concurrency:
     group: 'pages'
@@ -32,6 +34,7 @@ jobs:
               uses: actions/configure-pages@v5
               with:
                   static_site_generator: next
+                  enablement: true
 
             - name: Restore cache
               uses: actions/cache@v4
